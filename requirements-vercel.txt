@@ -1,0 +1,16 @@
+# Core dependencies for Vercel deployment
+requests==2.31.0
+pandas==2.1.4
+numpy==1.26.4
+
+# Data processing and matching (simplified)
+fuzzywuzzy==0.18.0
+python-Levenshtein==0.21.1
+rapidfuzz==3.13.0
+
+# File handling
+openpyxl==3.1.2
+
+# Web scraping (simplified)
+beautifulsoup4==4.12.2
+lxml==4.9.3 
