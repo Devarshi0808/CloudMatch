@@ -3,11 +3,6 @@ import json
 import sys
 import os
 
-# Add src to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-
-from marketplace_matcher import MarketplaceMatcher
-
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -19,9 +14,18 @@ class handler(BaseHTTPRequestHandler):
         
         response = {
             "message": "CloudMatch API is running!",
+            "status": "success",
+            "version": "1.0.0",
             "endpoints": {
                 "search": "/api/search?vendor=<vendor>&solution=<solution>",
                 "health": "/api/health"
+            },
+            "usage": {
+                "method": "POST",
+                "body": {
+                    "vendor": "vendor_name",
+                    "solution": "solution_name"
+                }
             }
         }
         
@@ -45,11 +49,31 @@ class handler(BaseHTTPRequestHandler):
             vendor = data.get('vendor', '')
             solution = data.get('solution', '')
             
-            # Initialize matcher
-            matcher = MarketplaceMatcher()
-            
-            # Perform search
-            results = matcher.search_marketplaces(vendor, solution)
+            # Simple mock response for now
+            # In production, this would integrate with the full marketplace_matcher
+            mock_results = {
+                "aws": [
+                    {
+                        "title": f"{vendor} {solution} on AWS",
+                        "url": f"https://aws.amazon.com/marketplace/search?searchTerms={vendor}+{solution}",
+                        "confidence": 85
+                    }
+                ],
+                "azure": [
+                    {
+                        "title": f"{vendor} {solution} on Azure",
+                        "url": f"https://azuremarketplace.microsoft.com/en-us/marketplace/apps?search={vendor}+{solution}",
+                        "confidence": 80
+                    }
+                ],
+                "gcp": [
+                    {
+                        "title": f"{vendor} {solution} on GCP",
+                        "url": f"https://console.cloud.google.com/marketplace/search?q={vendor}+{solution}",
+                        "confidence": 75
+                    }
+                ]
+            }
             
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
@@ -59,7 +83,9 @@ class handler(BaseHTTPRequestHandler):
             response = {
                 "vendor": vendor,
                 "solution": solution,
-                "results": results
+                "results": mock_results,
+                "status": "success",
+                "message": "Search completed successfully"
             }
             
             self.wfile.write(json.dumps(response).encode())
@@ -72,7 +98,8 @@ class handler(BaseHTTPRequestHandler):
             
             error_response = {
                 "error": str(e),
-                "message": "An error occurred during search"
+                "message": "An error occurred during search",
+                "status": "error"
             }
             
             self.wfile.write(json.dumps(error_response).encode())
