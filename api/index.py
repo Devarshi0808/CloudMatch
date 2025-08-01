@@ -1,15 +1,11 @@
 from http.server import BaseHTTPRequestHandler
 import json
-import sys
-import os
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
         
         response = {
@@ -17,15 +13,7 @@ class handler(BaseHTTPRequestHandler):
             "status": "success",
             "version": "1.0.0",
             "endpoints": {
-                "search": "/api/search?vendor=<vendor>&solution=<solution>",
-                "health": "/api/health"
-            },
-            "usage": {
-                "method": "POST",
-                "body": {
-                    "vendor": "vendor_name",
-                    "solution": "solution_name"
-                }
+                "search": "/api/search?vendor=<vendor>&solution=<solution>"
             }
         }
         
@@ -41,16 +29,18 @@ class handler(BaseHTTPRequestHandler):
             return
 
     def handle_search(self):
-        content_length = int(self.headers['Content-Length'])
-        post_data = self.rfile.read(content_length)
-        
         try:
-            data = json.loads(post_data.decode('utf-8'))
-            vendor = data.get('vendor', '')
-            solution = data.get('solution', '')
+            content_length = int(self.headers.get('Content-Length', 0))
+            if content_length > 0:
+                post_data = self.rfile.read(content_length)
+                data = json.loads(post_data.decode('utf-8'))
+                vendor = data.get('vendor', '')
+                solution = data.get('solution', '')
+            else:
+                vendor = ''
+                solution = ''
             
-            # Simple mock response for now
-            # In production, this would integrate with the full marketplace_matcher
+            # Simple response
             mock_results = {
                 "aws": [
                     {
