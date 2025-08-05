@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudMatch - Cloud Marketplace Discovery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #fdf6e3 0%, #e3f0ff 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: #7f8c8d;
+        }
+
+        .search-form {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #4285F4;
+        }
+
+        .search-btn {
+            background: linear-gradient(90deg, #4285F4 0%, #1f77b4 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(66, 133, 244, 0.3);
+        }
+
+        .search-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results {
+            display: none;
+        }
+
+        .marketplace-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        .marketplace-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .marketplace-logo {
+            width: 40px;
+            height: 40px;
+            margin-right: 1rem;
+            border-radius: 6px;
+        }
+
+        .marketplace-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .result-item {
+            padding: 1rem;
+            border: 1px solid #e1e8ed;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            transition: border-color 0.3s;
+        }
+
+        .result-item:hover {
+            border-color: #4285F4;
+        }
+
+        .result-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-url {
+            color: #4285F4;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .result-url:hover {
+            text-decoration: underline;
+        }
+
+        .confidence {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+
+        .confidence.high {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .confidence.medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .confidence.low {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #7f8c8d;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        .tips {
+            background: #e3f2fd;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+
+        .tips h3 {
+            color: #1976d2;
+            margin-bottom: 0.5rem;
+        }
+
+        .tips ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .tips li {
+            margin-bottom: 0.5rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .tips li:before {
+            content: "💡";
+            position: absolute;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>☁️ CloudMatch</h1>
+            <p>Intelligent cloud marketplace discovery tool</p>
+        </div>
+
+        <div class="tips">
+            <h3>💡 Search Tips</h3>
+            <ul>
+                <li>Try vendor names like "Red Hat", "Adobe", "Microsoft"</li>
+                <li>Search for solutions like "Jira", "Photoshop", "Office 365"</li>
+                <li>Use partial names - the system will find fuzzy matches</li>
+                <li>Results show confidence scores and direct marketplace links</li>
+            </ul>
+        </div>
+
+        <div class="search-form">
+            <div class="form-group">
+                <label for="vendor">Vendor Name</label>
+                <input type="text" id="vendor" placeholder="e.g., Red Hat, Adobe, Microsoft">
+            </div>
+            <div class="form-group">
+                <label for="solution">Solution/Product Name</label>
+                <input type="text" id="solution" placeholder="e.g., Jira, Photoshop, Office 365">
+            </div>
+            <button class="search-btn" onclick="performSearch()">🔍 Search Marketplaces</button>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            <p>🔍 Searching across AWS, Azure, and GCP marketplaces...</p>
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        async function performSearch() {
+            const vendor = document.getElementById('vendor').value.trim();
+            const solution = document.getElementById('solution').value.trim();
+            
+            if (!vendor && !solution) {
+                alert('Please enter at least a vendor name or solution name');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+            
+            // Disable button
+            const searchBtn = document.querySelector('.search-btn');
+            searchBtn.disabled = true;
+            searchBtn.textContent = 'Searching...';
+
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ vendor, solution })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    displayResults(data);
+                } else {
+                    throw new Error(data.message || 'Search failed');
+                }
+            } catch (error) {
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').textContent = `Error: ${error.message}`;
+            } finally {
+                // Hide loading and re-enable button
+                document.getElementById('loading').style.display = 'none';
+                searchBtn.disabled = false;
+                searchBtn.textContent = '🔍 Search Marketplaces';
+            }
+        }
+
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.style.display = 'block';
+
+            let html = `
+                <h2>Search Results for "${data.vendor} ${data.solution}"</h2>
+            `;
+
+            const marketplaces = [
+                { name: 'AWS', key: 'aws', logo: '🟠' },
+                { name: 'Azure', key: 'azure', logo: '🔵' },
+                { name: 'GCP', key: 'gcp', logo: '🟢' }
+            ];
+
+            marketplaces.forEach(marketplace => {
+                const results = data.results[marketplace.key] || [];
+                
+                html += `
+                    <div class="marketplace-section">
+                        <div class="marketplace-header">
+                            <span class="marketplace-logo">${marketplace.logo}</span>
+                            <span class="marketplace-name">${marketplace.name}</span>
+                        </div>
+                `;
+
+                if (results.length > 0) {
+                    results.forEach(result => {
+                        const confidenceClass = getConfidenceClass(result.confidence);
+                        html += `
+                            <div class="result-item">
+                                <div class="result-title">${result.title}</div>
+                                <a href="${result.url}" target="_blank" class="result-url">View on ${marketplace.name} →</a>
+                                <div class="confidence ${confidenceClass}">Confidence: ${result.confidence}%</div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += '<p>No results found for this marketplace.</p>';
+                }
+
+                html += '</div>';
+            });
+
+            resultsDiv.innerHTML = html;
+        }
+
+        function getConfidenceClass(confidence) {
+            if (confidence >= 80) return 'high';
+            if (confidence >= 60) return 'medium';
+            return 'low';
+        }
+
+        // Allow Enter key to trigger search
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+    </script>
+</body>
+</html> 

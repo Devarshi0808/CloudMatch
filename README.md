@@ -23,11 +23,13 @@
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Option 1: Local Development
+
+#### Prerequisites
 - Python 3.9 or higher
 - pip package manager
 
-### Installation
+#### Installation
 
 1. **Clone the repository**
    ```bash
@@ -55,6 +57,54 @@
 
 5. **Open your browser**
    Navigate to `http://localhost:8501`
+
+### Option 2: Vercel Deployment
+
+#### Live Demo
+Visit: [cloud-match.vercel.app](https://cloud-match.vercel.app)
+
+#### Deploy to Vercel
+
+1. **Fork this repository** to your GitHub account
+
+2. **Connect to Vercel**:
+   - Go to [vercel.com](https://vercel.com)
+   - Import your forked repository
+   - Vercel will automatically detect the configuration
+
+3. **Deploy**:
+   - Vercel will build and deploy automatically
+   - Your app will be available at `your-project.vercel.app`
+
+4. **Test the deployment**:
+   ```bash
+   python test_vercel_deployment.py https://your-project.vercel.app
+   ```
+
+#### Vercel Configuration
+- **API**: Serverless Python functions in `/api/index.py`
+- **Frontend**: Static HTML interface in `/public/index.html`
+- **Configuration**: `vercel.json` handles routing and build settings
+
+#### API Endpoints
+- `GET /` - Web interface
+- `GET /api/health` - Health check
+- `GET /api/search?vendor=<vendor>&solution=<solution>` - Search via GET
+- `POST /api/search` - Search via POST with JSON body
+
+Example API usage:
+```bash
+# Health check
+curl https://your-app.vercel.app/api/health
+
+# Search via GET
+curl "https://your-app.vercel.app/api/search?vendor=Red%20Hat&solution=Jira"
+
+# Search via POST
+curl -X POST https://your-app.vercel.app/api/search \
+  -H "Content-Type: application/json" \
+  -d '{"vendor": "Adobe", "solution": "Photoshop"}'
+```
 
 ---
 
