@@ -1,11 +1,15 @@
 # CloudMatch Vercel Deployment Guide
 
+CloudMatch uses a React frontend and a Python serverless API. The API performs explainable
+lexical retrieval over the local vendor catalog and exposes MCP-compatible tools. LLM query
+suggestions are optional and only enabled with `OPENAI_API_KEY`.
+
 ## Overview
 
 This project has been configured for deployment on Vercel with the following components:
 
 - **API Backend**: Python serverless functions in `/api/index.py`
-- **Frontend**: Static HTML interface in `/public/index.html`
+- **Frontend**: React interface loaded from `/public/index.html` and `/public/react-app.js`
 - **Configuration**: Vercel settings in `vercel.json`
 
 ## Deployment Structure
@@ -28,10 +32,13 @@ CloudMatch/
 - `GET /api/health` - Health check
 - `GET /api/search?vendor=<vendor>&solution=<solution>` - Search via GET
 - `POST /api/search` - Search via POST with JSON body
+- `GET /api/mcp` - List MCP-compatible tools
+- `POST /api/mcp` - Call `search_catalog` or `suggest_queries`
 
 ## Environment Variables
 
-No environment variables are required for basic functionality.
+No environment variables are required for deterministic matching. `OPENAI_API_KEY` optionally
+enables LLM query suggestions, with `OPENAI_MODEL` available as a model override.
 
 ## Dependencies
 
@@ -54,9 +61,10 @@ The following Python packages are required (see `requirements-vercel.txt`):
 
 ## Testing the Deployment
 
-1. Visit your Vercel domain
-2. Try searching for vendors like "Red Hat" or "Adobe"
-3. Test the API directly: `https://your-domain.vercel.app/api/health`
+1. Visit your Vercel domain.
+2. Search for `Red Hat`; `Ansible` should rank first from the local catalog.
+3. Test `https://your-domain.vercel.app/api/health`.
+4. Test MCP discovery at `https://your-domain.vercel.app/api/mcp`.
 
 ## Troubleshooting
 

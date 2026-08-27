@@ -3,6 +3,10 @@ import json
 import sys
 import os
 from urllib.parse import parse_qs, urlparse
+try:
+    from .catalog_matcher import llm_suggestions, search_catalog
+except ImportError:
+    from catalog_matcher import llm_suggestions, search_catalog
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -14,13 +18,22 @@ class handler(BaseHTTPRequestHandler):
             self.handle_health()
         elif path == '/api/search':
             self.handle_search_get(parsed_url.query)
+        elif path == '/api/mcp':
+            self.send_json({
+                "jsonrpc": "2.0",
+                "id": None,
+                "result": {"tools": self.mcp_tools()},
+            })
         else:
             self.handle_root()
     
     def do_POST(self):
         """Handle POST requests"""
-        if self.path == '/api/search':
+        path = urlparse(self.path).path
+        if path == '/api/search':
             self.handle_search_post()
+        elif path == '/api/mcp':
+            self.handle_mcp()
         else:
             self.send_response(404)
             self.end_headers()
@@ -139,13 +152,52 @@ class handler(BaseHTTPRequestHandler):
     
     def perform_search(self, vendor, solution):
         """Perform the search and return results"""
+        result = search_catalog(vendor, solution)
+        result["llm"] = llm_suggestions(result["query"])
+        return result
+
+    def send_json(self, response, status=200):
+        self.send_response(status)
+        self.send_header('Content-type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        self.wfile.write(json.dumps(response).encode())
+
+    def mcp_tools(self):
+        return [
+            {
+                "name": "search_catalog",
+                "description": "Rank vendor and product candidates from the CloudMatch catalog.",
+                "inputSchema": {"type": "object", "properties": {"vendor": {"type": "string"}, "solution": {"type": "string"}}},
+            },
+            {
+                "name": "suggest_queries",
+                "description": "Suggest marketplace query variants using an optional LLM.",
+                "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
+            },
+        ]
+
+    def handle_mcp(self):
         try:
-            # Simple search implementation that works without heavy dependencies
-            results = self.get_marketplace_results(vendor, solution)
-            return results
-        except Exception as e:
-            print(f"Search error: {e}")
-            return self.get_mock_results(vendor, solution)
+            length = int(self.headers.get('Content-Length', 0))
+            request = json.loads(self.rfile.read(length).decode('utf-8')) if length else {}
+            method = request.get('method')
+            if method == 'tools/list':
+                result = {"tools": self.mcp_tools()}
+            elif method == 'tools/call':
+                name = request.get('params', {}).get('name')
+                arguments = request.get('params', {}).get('arguments', {})
+                if name == 'search_catalog':
+                    result = {"content": [{"type": "json", "json": search_catalog(arguments.get('vendor', ''), arguments.get('solution', ''))}]}
+                elif name == 'suggest_queries':
+                    result = {"content": [{"type": "json", "json": llm_suggestions(arguments.get('query', ''))}]}
+                else:
+                    raise ValueError(f'Unknown tool: {name}')
+            else:
+                raise ValueError(f'Unsupported MCP method: {method}')
+            self.send_json({"jsonrpc": "2.0", "id": request.get('id'), "result": result})
+        except Exception as error:
+            self.send_json({"jsonrpc": "2.0", "id": None, "error": {"code": -32602, "message": str(error)}}, 400)
     
     def get_marketplace_results(self, vendor, solution):
         """Get marketplace results with intelligent matching"""
