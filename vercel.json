@@ -19,6 +19,14 @@
       "dest": "/api/index.py"
     },
     {
+      "src": "/react-app.js",
+      "dest": "/public/react-app.js"
+    },
+    {
+      "src": "/react-app.css",
+      "dest": "/public/react-app.css"
+    },
+    {
       "src": "/",
       "dest": "/public/index.html"
     },
