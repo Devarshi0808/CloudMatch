@@ -6,13 +6,15 @@ import time
 from urllib.parse import parse_qs, urlparse
 
 try:
+    from .agent_research import compare_products, research_products
     from .catalog_matcher import search_catalog
+    from .evidence_store import get_evidence
     from .open_search import search_open_marketplaces
-    from .provider_ingestion import ingest_configured_listings
 except ImportError:
+    from agent_research import compare_products, research_products
     from catalog_matcher import search_catalog
+    from evidence_store import get_evidence
     from open_search import search_open_marketplaces
-    from provider_ingestion import ingest_configured_listings
 
 MAX_BODY_BYTES = 16_384
 
@@ -31,14 +33,14 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         if parsed.path == "/api/health":
-            self.send_json({"status": "healthy", "service": "CloudMatch API", "version": "2.0.0"})
+            self.send_json({"status": "healthy", "service": "CloudMatch API", "version": "3.0.0", "runtime": "zero-cost"})
         elif parsed.path == "/api/search":
             params = parse_qs(parsed.query)
             self.handle_search(params.get("vendor", [""])[0], params.get("solution", [""])[0])
         elif parsed.path == "/api/mcp":
             self.send_json({"jsonrpc": "2.0", "id": None, "result": {"tools": self.mcp_tools()}})
         else:
-            self.send_json({"status": "ok", "service": "CloudMatch API", "endpoints": ["/api/health", "/api/search", "/api/mcp"]})
+            self.send_json({"status": "ok", "service": "CloudMatch API", "endpoints": ["/api/health", "/api/search", "/api/research", "/api/mcp"]})
 
     def do_POST(self):
         path = urlparse(self.path).path
@@ -51,6 +53,10 @@ class handler(BaseHTTPRequestHandler):
             return self.send_json({"status": "error", "message": "Request body must be valid JSON"}, 400)
         if path == "/api/search":
             self.handle_search(request.get("vendor", ""), request.get("solution", ""))
+        elif path == "/api/research":
+            prompt = request.get("request", "")
+            if not isinstance(prompt, str) or not prompt.strip(): return self.send_json({"status":"error","message":"request must be a non-empty string"}, 400)
+            self.send_json({"status":"success", "results": research_products(prompt)})
         elif path == "/api/mcp":
             self.handle_mcp(request)
         else:
@@ -73,9 +79,11 @@ class handler(BaseHTTPRequestHandler):
     def mcp_tools():
         search_schema = {"type": "object", "properties": {"vendor": {"type": "string"}, "solution": {"type": "string"}}}
         return [
-            {"name": "search_marketplaces", "description": "Search official provider APIs and return labeled benchmark fallbacks.", "inputSchema": search_schema},
+            {"name": "search_marketplaces", "description": "Search reviewed public listing evidence and return labeled benchmark fallbacks.", "inputSchema": search_schema},
             {"name": "catalog_lookup", "description": "Rank the bundled benchmark catalog; this is not live marketplace data.", "inputSchema": search_schema},
-            {"name": "ingest_listings", "description": "Run official marketplace adapters and return health metadata.", "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}},
+            {"name": "research_products", "description": "Turn a natural-language request into a grounded evidence brief with confidence and abstention.", "inputSchema": {"type":"object","properties":{"request":{"type":"string"}},"required":["request"]}},
+            {"name": "compare_products", "description": "Return a grounded comparison table for a natural-language request.", "inputSchema": {"type":"object","properties":{"request":{"type":"string"}},"required":["request"]}},
+            {"name": "get_evidence", "description": "Inspect one reviewed evidence record by stable ID.", "inputSchema": {"type":"object","properties":{"evidence_id":{"type":"string"}},"required":["evidence_id"]}},
         ]
 
     def handle_mcp(self, request):
@@ -90,7 +98,9 @@ class handler(BaseHTTPRequestHandler):
                 tools = {
                     "search_marketplaces": lambda: search_open_marketplaces(arguments.get("vendor", ""), arguments.get("solution", "")),
                     "catalog_lookup": lambda: search_catalog(arguments.get("vendor", ""), arguments.get("solution", "")),
-                    "ingest_listings": lambda: ingest_configured_listings(arguments.get("query", "")),
+                    "research_products": lambda: research_products(arguments.get("request", "")),
+                    "compare_products": lambda: compare_products(arguments.get("request", "")),
+                    "get_evidence": lambda: get_evidence(arguments.get("evidence_id", "")),
                 }
                 if params.get("name") not in tools:
                     raise ValueError(f"Unknown tool: {params.get('name')}")

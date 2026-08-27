@@ -1,81 +1,74 @@
 # CloudMatch
 
-CloudMatch is an evidence-first retrieval service for cloud marketplace discovery. It searches official AWS and Azure catalog APIs when credentials are configured, reports provider health independently, and falls back to a clearly labeled 154-record benchmark catalog instead of fabricating listings.
+CloudMatch is a zero-cost, agent-native research service for cloud marketplace discovery. It turns natural-language product requests into grounded briefs backed by reviewed public listings, exposes stable evidence IDs and source URLs, and abstains when its evidence cannot support an answer.
 
-[Live deployment](https://cloudmatch-theta.vercel.app) · [Architecture](docs/ARCHITECTURE_V2.md)
+[Live deployment](https://cloudmatch-theta.vercel.app) · [Architecture](docs/ARCHITECTURE_V3.md)
 
-## What makes v2 different
+## Why it is different
 
-- **Official ingestion:** AWS Marketplace Discovery `SearchListings` through Boto3/SigV4 and Azure Marketplace Catalog Search through its data-plane API.
-- **Explicit capability boundaries:** Google Cloud Marketplace is link-only because no supported public catalog-search API is available.
-- **Provenance on every result:** official results carry provider, source, verification method, listing ID, and retrieval timestamp.
-- **Independent degradation:** one unavailable provider does not break the others; every adapter reports `ok`, `not_configured`, `error`, or `link_only`.
-- **Explainable fallback:** the bundled catalog ranks vendor/product candidates with field and combined similarity evidence. It is never presented as live marketplace data.
-- **Agent integration:** a native FastMCP stdio server plus an HTTP JSON-RPC tool surface.
-- **Measured development baseline:** 25 transparent cases cover exact matches, aliases, typos, ambiguity, and abstention. This is a development set, not a production accuracy claim.
+- **Grounded agent workflow:** interpret provider and intent, retrieve candidates, calculate confidence, return evidence, or abstain.
+- **Inspectable provenance:** every marketplace result carries a stable ID, provider, public source URL, verification label, and date.
+- **No paid runtime dependency:** no AWS account, Azure subscription, API key, hosted model, vector database, or Firecrawl account is required to run the product.
+- **Hybrid retrieval with strict labels:** the reviewed evidence snapshot and 154-record benchmark catalog never masquerade as live inventory.
+- **Agent integration:** five tools are available through native FastMCP and an HTTP JSON-RPC surface.
+- **Measured behavior:** separate labeled sets test catalog ranking and the grounded agent's retrieval, provider constraints, and abstention.
+- **Evidence operations:** schema/domain validation and a scheduled CI workflow make snapshot maintenance reproducible.
 
-## Run locally
+Firecrawl is used only as an optional development tool to discover and review public listing pages before they enter the versioned snapshot. Production reads the committed evidence file and continues to work with no Firecrawl key or quota.
 
-Python 3.10+ is required for native MCP; Vercel uses Python 3.12.
+## Run and verify
+
+Python 3.10+ is sufficient; the production path uses the standard library.
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
 .venv/bin/pip install pytest
 .venv/bin/python dev_server.py
 ```
 
-Open `http://127.0.0.1:8000`.
-
-Provider credentials are optional. Without them, the UI remains functional using labeled benchmark results. Copy `.env.example` and configure:
-
-- standard AWS credentials with `aws-marketplace:SearchListings` access;
-- `AZURE_MARKETPLACE_CATALOG_API_KEY` from the Azure Marketplace Catalog team.
-
-## Verify
+Open `http://127.0.0.1:8000`, then run:
 
 ```bash
 .venv/bin/python -m pytest -q
 PYTHONPATH=. .venv/bin/python evaluation/evaluate.py
+PYTHONPATH=. .venv/bin/python evaluation/evaluate_agent.py
+.venv/bin/python scripts/validate_evidence.py
 ```
 
-Current maintained suite: **13 tests**. Current development set: **20 positive + 5 negative cases**. The legacy Streamlit/scraper prototype remains under `src/` and uses `requirements-legacy.txt`; it is not part of the v2 production path.
+Use `scripts/validate_evidence.py --check-urls` for a live network check. CI intentionally performs deterministic schema/provenance validation without depending on third-party uptime.
 
-## API
+## API and MCP
 
 ```bash
 curl https://cloudmatch-theta.vercel.app/api/health
-curl "https://cloudmatch-theta.vercel.app/api/search?vendor=Red%20Hat&solution=Ansible"
+curl -X POST https://cloudmatch-theta.vercel.app/api/research \
+  -H 'Content-Type: application/json' \
+  -d '{"request":"Find enterprise automation products on Azure"}'
 curl -X POST https://cloudmatch-theta.vercel.app/api/mcp \
   -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
-Native MCP:
-
-```bash
-python -m pip install -r requirements-mcp.txt
-python mcp_server.py
-```
-
-Available tools: `search_marketplaces`, `catalog_lookup`, and `ingest_listings`.
+For a native stdio MCP server, install `requirements-mcp.txt` and run `python mcp_server.py`. Tools: `research_products`, `compare_products`, `search_marketplaces`, `get_evidence`, and `catalog_lookup`.
 
 ## Honest limits
 
-- Official AWS/Azure searches require credentials and are not enabled on the public deployment yet.
-- Google Cloud offers no equivalent supported public discovery API, so CloudMatch provides a direct provider search link.
-- The 25-case evaluation is small and derived from the bundled catalog. It validates behavior and metric correctness, not real-world marketplace recall.
-- The static UI loads React from a CDN; a bundled frontend is a future hardening task.
+- The reviewed snapshot currently contains 11 AWS and Azure listings and is not a complete or real-time marketplace inventory.
+- Google Cloud remains link-only until reviewed records are added; provider-constrained requests correctly abstain when coverage is absent.
+- The 25-case catalog and 15-case agent sets are development evaluations, not claims about production-scale recall.
+- Retrieval is deterministic and explainable; “AI-native” refers to the agent contract and grounded decision workflow, not an unnecessary paid LLM call.
+- The static UI loads React from a CDN, so local/offline frontend bundling remains future hardening work.
 
 ## Source layout
 
 ```text
-api/provider_ingestion.py   official adapters + normalization
-api/open_search.py          hybrid orchestration + source boundaries
-api/catalog_matcher.py      deterministic explainable fallback
-api/index.py                Vercel HTTP API + JSON-RPC tools
+api/agent_research.py       intent parsing, grounded briefs, abstention
+api/evidence_store.py       reviewed-evidence retrieval and provenance
+api/open_search.py          hybrid evidence/benchmark orchestration
+api/index.py                Vercel HTTP API and JSON-RPC tool surface
+data/verified_listings.json versioned public-listing evidence
 mcp_server.py               native FastMCP stdio server
-evaluation/                 labeled development set + evaluator
-public/                     production UI
-src/                        archived v1 Streamlit/scraper prototype
+evaluation/                 labeled catalog and agent evaluations
+scripts/validate_evidence.py snapshot integrity and optional URL checks
+public/                     production research UI
 ```

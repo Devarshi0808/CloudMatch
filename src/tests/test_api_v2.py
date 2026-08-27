@@ -38,3 +38,12 @@ def test_mcp_unknown_tool_preserves_request_id():
     instance.handle_mcp({"jsonrpc": "2.0", "id": 42, "method": "tools/call", "params": {"name": "missing"}})
     payload = json.loads(instance.wfile.getvalue())
     assert captured["status"] == 400 and payload["id"] == 42
+
+def test_research_tool_is_exposed():
+    names = {tool["name"] for tool in handler.mcp_tools()}
+    assert {"research_products", "compare_products", "get_evidence"} <= names
+
+def test_research_returns_grounded_evidence():
+    result = __import__("api.agent_research", fromlist=["research_products"]).research_products("Find Ansible on Azure")
+    assert result["status"] == "grounded"
+    assert result["evidence"][0]["provider"] == "azure"

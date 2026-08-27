@@ -52,6 +52,7 @@ logs/
 # Data files (keep Excel but ignore HTML)
 data/*.html
 data/*.json
+!data/verified_listings.json
 
 # Temporary files
 *.tmp
