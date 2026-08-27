@@ -9,6 +9,7 @@ CloudMatch v2 is an explainable retrieval prototype for cloud-product discovery.
 3. The matcher ranks the local XLSX catalog using token overlap and sequence similarity.
 4. Each candidate returns a score and the evidence used to rank it.
 5. Provider links are generated as external discovery links and are not presented as verified listings.
+	Google Cloud uses the Marketplace browse route because its search route requires sign-in.
 6. An optional LLM can suggest query variants when `OPENAI_API_KEY` is configured.
 
 ## Agent integration

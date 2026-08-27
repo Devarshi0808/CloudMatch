@@ -77,7 +77,7 @@ def marketplace_links(query):
     return {
         "aws": f"https://aws.amazon.com/marketplace/search?searchTerms={encoded}",
         "azure": f"https://azuremarketplace.microsoft.com/en-us/marketplace/apps?search={encoded}",
-        "gcp": f"https://console.cloud.google.com/marketplace/search?q={encoded}",
+        "gcp": f"https://console.cloud.google.com/marketplace/browse?q={encoded}",
     }
 
 
