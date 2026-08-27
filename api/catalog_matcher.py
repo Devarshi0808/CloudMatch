@@ -95,8 +95,13 @@ def _search_catalog_cached(vendor, solution, limit):
         item_solution = str(item.get("solution_name", "")).strip()
         vendor_score = similarity(vendor, item_vendor) if vendor else 0.0
         solution_score = similarity(solution, item_solution) if solution else 0.0
-        score = vendor_score if vendor and not solution else solution_score if solution and not vendor else vendor_score * 0.55 + solution_score * 0.45
-        if score < 20:
+        if vendor and solution:
+            field_score = vendor_score * 0.55 + solution_score * 0.45
+            combined_score = similarity(query, f"{item_vendor} {item_solution}")
+            score = max(field_score, combined_score)
+        else:
+            score = vendor_score if vendor else solution_score
+        if score < 40:
             continue
         evidence = []
         if vendor:

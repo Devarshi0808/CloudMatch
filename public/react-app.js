@@ -1,90 +1,19 @@
 const { createElement: h, useState } = React;
-
 const marketplaceNames = { aws: "AWS", azure: "Azure", gcp: "Google Cloud" };
-
-function ResultCard({ match }) {
-  return h("article", { className: "match-card" },
-    h("div", { className: "match-card-top" },
-      h("div", null,
-        h("span", { className: "eyebrow" }, match.provider),
-        h("h3", null, match.title)
-      ),
-      h("strong", { className: "score" }, match.source === "open_web_llm_search" ? "Live" : "Web")
-    ),
-    h("p", { className: "match-type" }, "Observed web result"),
-    h("p", { className: "result-snippet" }, match.snippet || "Open the result to inspect the current provider page.")
-  );
-}
-
+function Badge({ children, tone = "neutral" }) { return h("span", { className: `badge badge-${tone}` }, children); }
+function OfficialResult({ match }) { return h("article", { className: "match-card" }, h("div", { className: "match-card-top" }, h("div", null, h("span", { className: "eyebrow" }, match.provider_name), h("h3", null, match.title)), h(Badge, { tone: "verified" }, "Official API")), h("p", { className: "result-snippet" }, match.description || `Published by ${match.vendor || "marketplace vendor"}.`), h("div", { className: "card-meta" }, h("span", null, match.vendor || "Publisher unavailable"), h("a", { href: match.url, target: "_blank", rel: "noreferrer" }, "Inspect listing ↗"))); }
+function BenchmarkResult({ match }) { return h("article", { className: "match-card benchmark-card" }, h("div", { className: "match-card-top" }, h("div", null, h("span", { className: "eyebrow" }, match.vendor), h("h3", null, match.solution)), h("strong", { className: "score" }, `${match.score}%`)), h("p", { className: "match-type" }, "Benchmark catalog · not a live listing"), h("ul", { className: "evidence" }, (match.evidence || []).map(item => h("li", { key: item }, item)))); }
+function ProviderHealth({ providers = {} }) { return h("div", { className: "health-grid" }, Object.entries(providers).map(([key, provider]) => { const tone = provider.status === "ok" ? "verified" : provider.status === "error" ? "error" : "neutral"; return h("div", { className: "health-row", key }, h("span", null, marketplaceNames[key]), h(Badge, { tone }, provider.status.replaceAll("_", " "))); })); }
 function App() {
-  const [vendor, setVendor] = useState("");
-  const [solution, setSolution] = useState("");
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  async function search(event) {
-    event.preventDefault();
-    if (!vendor.trim() && !solution.trim()) return setError("Enter a vendor, product, or both.");
-    setLoading(true);
-    setError("");
-    try {
-      const response = await fetch("/api/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vendor: vendor.trim(), solution: solution.trim() })
-      });
-      const next = await response.json();
-      if (!response.ok || next.status !== "success") throw new Error(next.message || "Search failed");
-      setData(next.results);
-    } catch (searchError) {
-      setError(searchError.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
+  const [vendor, setVendor] = useState("Red Hat"), [solution, setSolution] = useState("Ansible"), [data, setData] = useState(null), [loading, setLoading] = useState(false), [error, setError] = useState("");
+  async function search(event) { event.preventDefault(); if (!vendor.trim() && !solution.trim()) return setError("Enter a vendor, product, or both."); setLoading(true); setError(""); try { const response = await fetch("/api/search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vendor: vendor.trim(), solution: solution.trim() }) }); const next = await response.json(); if (!response.ok || next.status !== "success") throw new Error(next.message || "Search failed"); setData(next.results); } catch (searchError) { setError(searchError.message); } finally { setLoading(false); } }
+  const official = data?.matches || [], benchmark = data?.catalog_matches || [];
   return h("main", { className: "app-shell" },
-    h("nav", { className: "topbar" },
-      h("div", { className: "brand" }, h("span", { className: "brand-mark" }, "CM"), h("span", null, "CloudMatch")),
-      h("div", { className: "system-status" }, h("span", { className: "status-dot" }), "Hybrid retrieval online")
-    ),
-    h("section", { className: "hero" },
-      h("div", { className: "hero-copy" },
-        h("p", { className: "kicker" }, "Marketplace intelligence / v2"),
-        h("h1", null, "Find the right cloud product, with evidence."),
-        h("p", { className: "hero-text" }, "Open-web discovery for vendor and product listings across AWS, Azure, and Google Cloud."),
-        h("div", { className: "architecture-strip" },
-          h("span", null, "Normalize"), h("i", null, "→"), h("span", null, "Retrieve"), h("i", null, "→"), h("span", null, "Explain"), h("i", null, "→"), h("span", null, "LLM tail")
-        )
-      ),
-      h("form", { className: "search-panel", onSubmit: search },
-        h("label", null, "Vendor", h("input", { value: vendor, onChange: event => setVendor(event.target.value), placeholder: "Red Hat, Adobe, Microsoft" })),
-        h("label", null, "Product or solution", h("input", { value: solution, onChange: event => setSolution(event.target.value), placeholder: "Ansible, Photoshop, Office 365" })),
-        h("button", { type: "submit", disabled: loading }, loading ? "Ranking..." : "Rank matches"),
-        error && h("p", { className: "form-error" }, error)
-      )
-    ),
-    h("section", { className: "workspace" },
-      h("div", { className: "section-heading" },
-        h("div", null, h("p", { className: "kicker" }, "Results"), h("h2", null, data ? `Matches for ${data.query}` : "Start with a vendor or product")),
-        data && h("span", { className: "catalog-count" }, `${data.catalog_size} catalog records`)
-      ),
-      data ? h("div", { className: "results-grid" },
-        h("div", { className: "match-list" }, data.matches.length ? data.matches.map((match, index) => h("div", { key: `${match.url}-${index}` }, h(ResultCard, { match }), h("a", { className: "result-open", href: match.url, target: "_blank", rel: "noreferrer" }, "Open observed result ↗"))) : h("div", { className: "empty-state" }, data.disclaimer || "No live web results were returned.")),
-        h("aside", { className: "insight-panel" },
-          h("p", { className: "kicker" }, "External discovery"),
-          h("h3", null, "Search live marketplaces"),
-          h("p", null, data.disclaimer || "Provider search pages are available for direct inspection."),
-          h("div", { className: "provider-links" }, Object.entries(data.provider_links || {}).map(([key, link]) => h("a", { href: link.url, target: "_blank", rel: "noreferrer", key: key }, `${marketplaceNames[key]} ↗`))),
-          h("div", { className: "llm-box" }, h("span", { className: "llm-badge" }, data.llm?.enabled ? "LLM enabled" : "LLM optional"), h("p", null, data.llm?.suggestions?.length ? data.llm.suggestions.join(" · ") : "Deterministic ranking is active. Configure OPENAI_API_KEY for query suggestions."))
-          , h("div", { className: "telemetry" }, `${data.observability?.duration_ms ?? "-"} ms · ${data.source}`)
-        )
-      ) : h("div", { className: "empty-state initial" }, "Observed provider results will appear here. Try “Red Hat” to search the open web."),
-    ),
-    h("footer", null, h("span", null, "CloudMatch / explainable retrieval"), h("span", null, "MCP-compatible tools at /api/mcp"))
-  );
+    h("nav", { className: "topbar" }, h("div", { className: "brand" }, h("span", { className: "brand-mark" }, "CM"), h("span", null, "CloudMatch")), h("div", { className: "system-status" }, h("span", { className: "status-dot" }), "Evidence-first retrieval")),
+    h("section", { className: "hero" }, h("div", { className: "hero-copy" }, h("p", { className: "kicker" }, "Marketplace intelligence / v2"), h("h1", null, "Search cloud products. Keep the provenance."), h("p", { className: "hero-text" }, "Official AWS and Azure adapters, provider-level health, explainable fallback ranking, and an MCP tool surface for agents."), h("div", { className: "architecture-strip" }, h("span", null, "Ingest"), h("i", null, "→"), h("span", null, "Normalize"), h("i", null, "→"), h("span", null, "Rank"), h("i", null, "→"), h("span", null, "Verify"))), h("form", { className: "search-panel", onSubmit: search }, h("label", null, "Vendor", h("input", { value: vendor, onChange: e => setVendor(e.target.value), maxLength: 160, placeholder: "Red Hat" })), h("label", null, "Product or solution", h("input", { value: solution, onChange: e => setSolution(e.target.value), maxLength: 160, placeholder: "Ansible" })), h("button", { type: "submit", disabled: loading }, loading ? "Searching providers…" : "Search marketplaces"), error && h("p", { className: "form-error", role: "alert" }, error))),
+    h("section", { className: "workspace", "aria-live": "polite" }, h("div", { className: "section-heading" }, h("div", null, h("p", { className: "kicker" }, "Retrieval workspace"), h("h2", null, data ? `Results for “${data.query}”` : "Run an evidence-backed search")), data && h("span", { className: "catalog-count" }, `${data.observability.duration_ms} ms · ${data.catalog_size} benchmark records`)), !data ? h("div", { className: "empty-state initial" }, "The live demo works without cloud credentials using a clearly labeled benchmark catalog. Configure official APIs to surface verified listings.") : h("div", { className: "results-grid" },
+      h("div", { className: "match-list" }, h("div", { className: "result-section-title" }, h("h3", null, "Official marketplace results"), h(Badge, { tone: official.length ? "verified" : "neutral" }, `${official.length} returned`)), official.length ? official.map((match, index) => h(OfficialResult, { match, key: `${match.provider}-${match.listing_id}-${index}` })) : h("div", { className: "empty-state" }, data.disclaimer), h("div", { className: "result-section-title benchmark-title" }, h("h3", null, "Explainable benchmark suggestions"), h(Badge, null, `${benchmark.length} ranked`)), benchmark.map((match, index) => h(BenchmarkResult, { match, key: `${match.vendor}-${match.solution}-${index}` }))),
+      h("aside", { className: "insight-panel" }, h("p", { className: "kicker" }, "Provider status"), h("h3", null, "Know what answered"), h("p", null, "Every result carries its source. Unavailable integrations degrade independently instead of fabricating listings."), h(ProviderHealth, { providers: data.providers }), h("div", { className: "provider-links" }, Object.entries(data.provider_links || {}).map(([key, link]) => h("a", { href: link.url, target: "_blank", rel: "noreferrer", key }, `Search ${marketplaceNames[key]} directly ↗`))), h("div", { className: "telemetry" }, `${data.retrieval.official_adapters_configured} adapters active · ${data.retrieval.official_results} official · ${data.retrieval.benchmark_results} benchmark`))))),
+    h("footer", null, h("span", null, "CloudMatch / official APIs + explainable retrieval"), h("span", null, "Native MCP server included")));
 }
-
-document.body.innerHTML = '<div id="root"></div>';
 ReactDOM.createRoot(document.getElementById("root")).render(h(App));

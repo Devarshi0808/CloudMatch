@@ -1,12 +1,14 @@
 [
-  {"vendor": "Adobe", "solution": "Adobe Creative Cloud", "expected_vendor": "Adobe", "expected_solution": "Adobe Creative Cloud"},
-  {"vendor": "Atlassian", "solution": "Jira Software", "expected_vendor": "Atlassian", "expected_solution": "Jira Software"},
-  {"vendor": "Salesforc", "solution": "Sales Cloud", "expected_vendor": "Salesforce", "expected_solution": "Sales Cloud"},
-  {"vendor": "Servicenow", "solution": "ITSM", "expected_vendor": "ServiceNow", "expected_solution": "IT Service Management"},
-  {"vendor": "RedHat", "solution": "Open Shift", "expected_vendor": "Red Hat", "expected_solution": "OpenShift"},
-  {"vendor": "Zendesk", "solution": "Zendesk Suite", "expected_vendor": "Zendesk", "expected_solution": "Zendesk Suite"},
-  {"vendor": "Gitlab", "solution": "Ultimate", "expected_vendor": "GitLab", "expected_solution": "GitLab Ultimate"},
-  {"vendor": "Slack", "solution": "Slack", "expected_vendor": "Slack Technologies", "expected_solution": "Slack"},
-  {"vendor": "Dropbox", "solution": "Business", "expected_vendor": "Dropbox", "expected_solution": "Dropbox Business"},
-  {"vendor": "Twilio", "solution": "Flex", "expected_vendor": "Twilio", "expected_solution": "Twilio Flex"}
+ {"vendor":"Adobe","solution":"Adobe Creative Cloud","expected":["Adobe","Adobe Creative Cloud"]}, {"vendor":"Atlassian","solution":"Jira Software","expected":["Atlassian","Jira Software"]},
+ {"vendor":"Salesforc","solution":"Sales Cloud","expected":["Salesforce","Sales Cloud"]}, {"vendor":"Servicenow","solution":"ITSM","expected":["ServiceNow","ITSM"]},
+ {"vendor":"RedHat","solution":"Open Shift","expected":["Red Hat","OpenShift"]}, {"vendor":"Zendesk","solution":"Zendesk Suite","expected":["Zendesk","Zendesk Suite"]},
+ {"vendor":"Gitlab","solution":"Ultimate","expected":["GitLab","GitLab Ultimate"]}, {"vendor":"Slack","solution":"Slack","expected":["Slack Technologies","Slack"]},
+ {"vendor":"Dropbox","solution":"Business","expected":["Dropbox","Dropbox Business"]}, {"vendor":"Twilio","solution":"Flex","expected":["Twilio","Twilio Flex"]},
+ {"vendor":"Datadog","solution":"APM","expected":["Datadog","Datadog APM"]}, {"vendor":"New Relic","solution":"One","expected":["New Relic","New Relic One"]},
+ {"vendor":"Okta","solution":"Identity","expected":["Okta","Okta Identity Cloud"]}, {"vendor":"Monday","solution":"Work OS","expected":["Monday.com","Monday Work OS"]},
+ {"vendor":"Lucid","solution":"Lucidchart","expected":["Lucid Software","Lucidchart"]}, {"vendor":"Docusign","solution":"esignature","expected":["DocuSign","DocuSign eSignature"]},
+ {"vendor":"Hubspot","solution":"CRM","expected":["HubSpot","HubSpot CRM"]}, {"vendor":"Pager Duty","solution":"Digital Operations","expected":["PagerDuty","PagerDuty Digital Operations"]},
+ {"vendor":"Quickbooks","solution":"Online","expected":["Intuit","QuickBooks Online"]}, {"vendor":"SAP","solution":"Concur","expected":["Concur","SAP Concur"]},
+ {"vendor":"zzzz nonexistent","solution":"","expected":null}, {"vendor":"quantum banana","solution":"","expected":null}, {"vendor":"unknown vendor","solution":"imaginary suite","expected":null},
+ {"vendor":"","solution":"hyperdrive accounting nebula","expected":null}, {"vendor":"acme fictional","solution":"cloud toaster pro","expected":null}
 ]

@@ -1,9 +1,13 @@
-"""Open marketplace discovery with an optional live web-search provider."""
+"""Hybrid marketplace retrieval with explicit source boundaries."""
 
-import json
-import os
 import urllib.parse
-import urllib.request
+
+try:
+    from .catalog_matcher import search_catalog
+    from .provider_ingestion import ingest_configured_listings
+except ImportError:
+    from catalog_matcher import search_catalog
+    from provider_ingestion import ingest_configured_listings
 
 PROVIDERS = {
     "aws": {"name": "AWS Marketplace", "url": "https://aws.amazon.com/marketplace/search?searchTerms={query}"},
@@ -12,44 +16,24 @@ PROVIDERS = {
 }
 
 
-def _provider_links(query):
+def provider_links(query):
     encoded = urllib.parse.quote_plus(query)
     return {key: {"provider": value["name"], "url": value["url"].format(query=encoded), "source": "provider_search_page"} for key, value in PROVIDERS.items()}
 
 
-def _openai_web_search(query):
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        return None
-    payload = json.dumps({
-        "model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-        "tools": [{"type": "web_search_preview"}],
-        "input": (
-            "Search the open web for real cloud marketplace listings for this query: "
-            f"{query}. Return JSON only as {{\"results\":[{{\"provider\":\"AWS|Azure|GCP\","
-            "\"title\":\"...\",\"url\":\"https://...\",\"snippet\":\"...\"}}]}}. "
-            "Only include pages you actually found. Do not invent listings or URLs."
-        ),
-    }).encode()
-    request = urllib.request.Request("https://api.openai.com/v1/responses", data=payload, headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"})
-    with urllib.request.urlopen(request, timeout=15) as response:
-        body = json.loads(response.read().decode())
-    parsed = json.loads(body.get("output_text", "{}"))
-    return [{
-        "provider": item.get("provider", "Unknown"), "title": item.get("title", "Untitled result"),
-        "url": item.get("url", ""), "snippet": item.get("snippet", ""), "source": "open_web_llm_search"
-    } for item in parsed.get("results", []) if str(item.get("url", "")).startswith("https://")]
-
-
-def search_open_marketplaces(vendor="", solution=""):
-    query = " ".join(part.strip() for part in (vendor, solution) if part and part.strip())
-    links = _provider_links(query) if query else {}
+def search_open_marketplaces(vendor="", solution="", limit=10):
+    vendor = " ".join(str(vendor or "").split())[:160]
+    solution = " ".join(str(solution or "").split())[:160]
+    query = " ".join(part for part in (vendor, solution) if part)
     if not query:
-        return {"query": "", "matches": [], "provider_links": {}, "source": "open_web_search"}
-    try:
-        matches = _openai_web_search(query)
-        if matches is not None:
-            return {"query": query, "matches": matches, "provider_links": links, "source": "open_web_llm_search", "disclaimer": "Results were retrieved from live web search and should be opened to verify current marketplace availability."}
-    except Exception as error:
-        return {"query": query, "matches": [], "provider_links": links, "source": "open_web_search_unavailable", "provider_error": str(error), "disclaimer": "Live provider search is unavailable; no catalog fallback was used."}
-    return {"query": query, "matches": [], "provider_links": links, "source": "provider_search_page", "disclaimer": "No live search provider is configured; links open provider search pages and no catalog fallback is used."}
+        return {"query": "", "matches": [], "catalog_matches": [], "provider_links": {}, "providers": {}, "source": "empty_query", "disclaimer": "Enter a vendor, product, or both."}
+    ingestion = ingest_configured_listings(query, limit)
+    benchmark = search_catalog(vendor, solution, limit=limit)
+    configured = sum(result["status"] == "ok" for result in ingestion["providers"].values())
+    return {
+        "query": query, "matches": ingestion["listings"], "catalog_matches": benchmark["matches"],
+        "catalog_size": benchmark["catalog_size"], "provider_links": provider_links(query), "providers": ingestion["providers"],
+        "source": "official_provider_apis" if ingestion["listings"] else "benchmark_catalog",
+        "retrieval": {"official_adapters_configured": configured, "official_results": len(ingestion["listings"]), "benchmark_results": len(benchmark["matches"])},
+        "disclaimer": "Official provider API results are shown first; benchmark suggestions are independently labeled." if ingestion["listings"] else "No official provider API returned results. Suggestions below come from the bundled benchmark catalog, not live marketplaces.",
+    }

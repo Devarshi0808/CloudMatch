@@ -1,50 +1,56 @@
-# CloudMatch v2 Architecture
+# CloudMatch v2 architecture
 
-CloudMatch v2 is an explainable retrieval prototype for cloud-product discovery.
+## User story
 
-## Request flow
+A user submits a vendor, product, or both. CloudMatch concurrently queries every supported official provider adapter, normalizes returned listings into one schema, and renders provenance and provider health. If no official listing is available, it returns separately labeled suggestions from a local benchmark catalog plus direct provider search links.
 
-1. `api/index.py` receives a search request.
-2. `api/catalog_matcher.py` normalizes vendor and product text.
-3. The default search sends the query to an open-web search provider with marketplace-scoped intent.
-4. Only observed web pages are returned as results; no marketplace result is fabricated.
-5. Provider links remain available for direct inspection. Google Cloud uses the Marketplace browse route.
-6. An optional LLM web-search tool can retrieve live results when `OPENAI_API_KEY` is configured.
-
-## Agent integration
-
-`/api/mcp` exposes an agent tool interface with `tools/list` and `tools/call` operations:
-
-- `search_marketplaces`
-- `catalog_lookup` (explicit seed-catalog lookup only)
-- `suggest_queries`
-
-This endpoint is intentionally described as MCP-compatible tooling, not a complete MCP server
-transport. A future version can add the official MCP transport and lifecycle requirements.
-
-## Current data boundary
-
-The repository contains a 154-row vendor/product catalog for evaluation and explicit lookup only.
-It is never used as the default marketplace search source. The default path uses open-web search;
-provider APIs or permitted ingestion adapters should replace it for durable listing verification.
-
-## Evaluation
-
-`evaluation/golden_queries.json` contains a small, transparent development set. Run:
-
-```bash
-PYTHONPATH=. python3 evaluation/evaluate.py
+```text
+Browser
+  -> POST /api/search
+     -> concurrent adapter fan-out
+        -> AWS Marketplace Discovery API (SigV4/IAM)
+        -> Azure Marketplace Catalog API (API key)
+        -> GCP capability report (link-only)
+     -> normalized official listings
+     -> explainable benchmark retrieval
+  <- results + provenance + provider health + timing
 ```
 
-The result is a retrieval baseline, not a production quality claim. The set should grow with
-reviewed positive and negative pairs before reporting metrics publicly.
+## Provider contracts
 
-## Observability
+| Provider | Integration | Authentication | Production state |
+|---|---|---|---|
+| AWS | Marketplace Discovery `SearchListings` | AWS credential chain / IAM | Implemented, credential-gated |
+| Azure | Marketplace Catalog Search API `2025-05-01` | `X-API-Key` | Implemented, credential-gated |
+| Google Cloud | Provider browse URL | None | Link-only; no supported public catalog search API |
 
-Search responses include:
+All official results normalize to: `provider`, `provider_name`, `listing_id`, `title`, `vendor`, `description`, `url`, `source`, `verification`, and `retrieved_at`.
 
-- `duration_ms`
-- `cache_hit`
-- `cache_size`
+## Failure semantics
 
-The cache is bounded per warm serverless process and is not a shared persistence layer.
+Adapters return structured health instead of raising through the request boundary:
+
+- `ok`: official API answered, including valid zero-result searches;
+- `not_configured`: required credentials are absent;
+- `error`: configured provider failed or timed out;
+- `link_only`: provider has no supported programmatic discovery path;
+- `skipped`: query validation prevented execution.
+
+The UI never converts a provider search URL into a listing and never labels benchmark rows as observed marketplace inventory.
+
+## Retrieval and evaluation
+
+The 154-row XLSX is a benchmark and fallback candidate set. Ranking combines normalized token overlap and sequence similarity across individual vendor/product fields and the combined query. Candidates below a 40-point confidence floor are rejected.
+
+The evaluator reports top-1 precision, top-3 recall, MRR@8, abstention accuracy, overall accuracy, and per-case failures. The current 25 cases are deliberately small and transparent; metrics must not be generalized to marketplace-scale quality.
+
+## Agent interfaces
+
+- `mcp_server.py`: official FastMCP stdio transport, Python 3.10+.
+- `/api/mcp`: lightweight JSON-RPC `tools/list` and `tools/call` interface for the deployed demo. It is not described as a full Streamable HTTP MCP transport.
+
+Both surfaces expose the same three operations: `search_marketplaces`, `catalog_lookup`, and `ingest_listings`.
+
+## Deployment and verification
+
+Vercel serves `public/` statically and `api/index.py` on Python 3.12. Responses include duration, selected source, and result count. The release gate is maintained tests, evaluation, local HTTP flow, Vercel build success, live endpoint checks, and runtime-error inspection.
