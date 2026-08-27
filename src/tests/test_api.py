@@ -2,6 +2,7 @@ import io
 import json
 from unittest.mock import patch
 from api.index import handler
+from api.agent_research import parse_request
 
 def make_handler(body=b"{}"):
     instance = object.__new__(handler)
@@ -27,7 +28,7 @@ def test_search_rejects_empty_query():
 
 def test_search_returns_observability():
     instance, captured = make_handler()
-    result = {"query": "Red Hat", "matches": [], "source": "benchmark_catalog"}
+    result = {"query": "Red Hat", "matches": [], "source": "live_web_search"}
     with patch("api.index.search_open_marketplaces", return_value=result): instance.handle_search("Red Hat", "")
     payload = json.loads(instance.wfile.getvalue())
     assert captured["status"] == 200
@@ -41,9 +42,16 @@ def test_mcp_unknown_tool_preserves_request_id():
 
 def test_research_tool_is_exposed():
     names = {tool["name"] for tool in handler.mcp_tools()}
-    assert {"research_products", "compare_products", "get_evidence"} <= names
+    assert names == {"search_marketplaces", "research_products", "compare_products"}
 
 def test_research_returns_grounded_evidence():
-    result = __import__("api.agent_research", fromlist=["research_products"]).research_products("Find Ansible on Azure")
+    live={"query":"Ansible","matches":[{"id":"live-1","provider":"azure","title":"Ansible","url":"https://azuremarketplace.microsoft.com/en-us/marketplace/apps/x","description":"Live","relevance_score":0.9,"rank_score":1.1,"verification":"official_domain","retrieved_at":"now"}],"providers":{"azure":{"status":"ok"}},"retrieved_at":"now","disclaimer":"live"}
+    with patch("api.agent_research.search_live_marketplaces", return_value=live):
+        result = __import__("api.agent_research", fromlist=["research_products"]).research_products("Find Ansible on Azure")
     assert result["status"] == "grounded"
     assert result["evidence"][0]["provider"] == "azure"
+
+def test_agent_expands_known_product_family_without_changing_user_request():
+    parsed=parse_request("Find Red Hat Ansible on Azure")
+    assert parsed["query"] == "Find Red Hat Ansible on Azure"
+    assert parsed["search_query"] == "Red Hat Ansible Automation Platform"

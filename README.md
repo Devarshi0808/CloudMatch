@@ -1,74 +1,49 @@
 # CloudMatch
 
-CloudMatch is a zero-cost, agent-native research service for cloud marketplace discovery. It turns natural-language product requests into grounded briefs backed by reviewed public listings, exposes stable evidence IDs and source URLs, and abstains when its evidence cannot support an answer.
+CloudMatch is an agent-native cloud marketplace research service. Every request performs a current Tavily search restricted to official AWS Marketplace, Microsoft Azure Marketplace, and Google Cloud Marketplace domains. It returns source URLs and retrieval timestamps or explicitly abstains when no live listing can be verified.
 
-[Live deployment](https://cloudmatch-theta.vercel.app) · [Architecture](docs/ARCHITECTURE_V3.md)
+[Live deployment](https://cloudmatch-theta.vercel.app) · [Architecture](docs/ARCHITECTURE_V4.md)
 
-## Why it is different
+## Runtime guarantees
 
-- **Grounded agent workflow:** interpret provider and intent, retrieve candidates, calculate confidence, return evidence, or abstain.
-- **Inspectable provenance:** every marketplace result carries a stable ID, provider, public source URL, verification label, and date.
-- **No paid runtime dependency:** no AWS account, Azure subscription, API key, hosted model, vector database, or Firecrawl account is required to run the product.
-- **Hybrid retrieval with strict labels:** the reviewed evidence snapshot and 154-record benchmark catalog never masquerade as live inventory.
-- **Agent integration:** five tools are available through native FastMCP and an HTTP JSON-RPC surface.
-- **Measured behavior:** separate labeled sets test catalog ranking and the grounded agent's retrieval, provider constraints, and abstention.
-- **Evidence operations:** schema/domain validation and a scheduled CI workflow make snapshot maintenance reproducible.
+- No bundled product catalog, synthetic listing data, or precomputed result snapshot.
+- No AWS account, Azure subscription, marketplace credentials, or paid plan; Tavily's free API key is required.
+- Results must use HTTPS, match an allowlisted official hostname, and match that provider's marketplace path.
+- Provider failures are reported independently; unavailable retrieval never creates a fallback listing.
+- Natural-language research and comparison are available through HTTP and native MCP tools.
 
-Firecrawl is used only as an optional development tool to discover and review public listing pages before they enter the versioned snapshot. Production reads the committed evidence file and continues to work with no Firecrawl key or quota.
+The production API makes one Tavily basic search with `include_domains` restricted to the three official hosts, then independently validates every returned hostname and marketplace path. Automatic parameters and generated answers are disabled to keep each request at one free-plan credit and preserve CloudMatch's own grounding boundary.
 
 ## Run and verify
 
-Python 3.10+ is sufficient; the production path uses the standard library.
-
 ```bash
+cp .env.example .env  # add the free TAVILY_API_KEY
 python3 -m venv .venv
 .venv/bin/pip install pytest
 .venv/bin/python dev_server.py
-```
-
-Open `http://127.0.0.1:8000`, then run:
-
-```bash
 .venv/bin/python -m pytest -q
-PYTHONPATH=. .venv/bin/python evaluation/evaluate.py
-PYTHONPATH=. .venv/bin/python evaluation/evaluate_agent.py
-.venv/bin/python scripts/validate_evidence.py
 ```
 
-Use `scripts/validate_evidence.py --check-urls` for a live network check. CI intentionally performs deterministic schema/provenance validation without depending on third-party uptime.
-
-## API and MCP
+The test suite mocks network boundaries for deterministic parser, allowlist, failure-state, API, and agent-contract tests. For a real integration check:
 
 ```bash
-curl https://cloudmatch-theta.vercel.app/api/health
-curl -X POST https://cloudmatch-theta.vercel.app/api/research \
+curl -X POST http://127.0.0.1:8000/api/research \
   -H 'Content-Type: application/json' \
-  -d '{"request":"Find enterprise automation products on Azure"}'
-curl -X POST https://cloudmatch-theta.vercel.app/api/mcp \
-  -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+  -d '{"request":"Find Red Hat Ansible on AWS"}'
 ```
 
-For a native stdio MCP server, install `requirements-mcp.txt` and run `python mcp_server.py`. Tools: `research_products`, `compare_products`, `search_marketplaces`, `get_evidence`, and `catalog_lookup`.
+## Interfaces
 
-## Honest limits
+- `POST /api/research` — live natural-language research brief or abstention.
+- `GET|POST /api/search` — live vendor/product search.
+- `POST /api/mcp` — JSON-RPC `tools/list` and `tools/call`.
+- `python mcp_server.py` — native FastMCP stdio server.
 
-- The reviewed snapshot currently contains 11 AWS and Azure listings and is not a complete or real-time marketplace inventory.
-- Google Cloud remains link-only until reviewed records are added; provider-constrained requests correctly abstain when coverage is absent.
-- The 25-case catalog and 15-case agent sets are development evaluations, not claims about production-scale recall.
-- Retrieval is deterministic and explainable; “AI-native” refers to the agent contract and grounded decision workflow, not an unnecessary paid LLM call.
-- The static UI loads React from a CDN, so local/offline frontend bundling remains future hardening work.
+MCP tools: `search_marketplaces`, `research_products`, and `compare_products`.
 
-## Source layout
+## Honest limitations
 
-```text
-api/agent_research.py       intent parsing, grounded briefs, abstention
-api/evidence_store.py       reviewed-evidence retrieval and provenance
-api/open_search.py          hybrid evidence/benchmark orchestration
-api/index.py                Vercel HTTP API and JSON-RPC tool surface
-data/verified_listings.json versioned public-listing evidence
-mcp_server.py               native FastMCP stdio server
-evaluation/                 labeled catalog and agent evaluations
-scripts/validate_evidence.py snapshot integrity and optional URL checks
-public/                     production research UI
-```
+- Results depend on public web indexing and provider page discoverability; this is not an exhaustive inventory API.
+- Azure may challenge direct automated requests and Google pages are JavaScript-heavy, which is why discovery uses official-domain web indexing.
+- Tavily's free tier currently provides 1,000 basic searches per month. CloudMatch reports quota or retrieval failures instead of hiding them.
+- Result snippets come from current search-index content; users can inspect every official source URL directly.

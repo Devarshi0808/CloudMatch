@@ -7,13 +7,9 @@ from urllib.parse import parse_qs, urlparse
 
 try:
     from .agent_research import compare_products, research_products
-    from .catalog_matcher import search_catalog
-    from .evidence_store import get_evidence
     from .open_search import search_open_marketplaces
 except ImportError:
     from agent_research import compare_products, research_products
-    from catalog_matcher import search_catalog
-    from evidence_store import get_evidence
     from open_search import search_open_marketplaces
 
 MAX_BODY_BYTES = 16_384
@@ -33,7 +29,7 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         if parsed.path == "/api/health":
-            self.send_json({"status": "healthy", "service": "CloudMatch API", "version": "3.0.0", "runtime": "zero-cost"})
+            self.send_json({"status": "healthy", "service": "CloudMatch API", "version": "4.0.0", "runtime": "tavily-live-search"})
         elif parsed.path == "/api/search":
             params = parse_qs(parsed.query)
             self.handle_search(params.get("vendor", [""])[0], params.get("solution", [""])[0])
@@ -79,11 +75,9 @@ class handler(BaseHTTPRequestHandler):
     def mcp_tools():
         search_schema = {"type": "object", "properties": {"vendor": {"type": "string"}, "solution": {"type": "string"}}}
         return [
-            {"name": "search_marketplaces", "description": "Search reviewed public listing evidence and return labeled benchmark fallbacks.", "inputSchema": search_schema},
-            {"name": "catalog_lookup", "description": "Rank the bundled benchmark catalog; this is not live marketplace data.", "inputSchema": search_schema},
-            {"name": "research_products", "description": "Turn a natural-language request into a grounded evidence brief with confidence and abstention.", "inputSchema": {"type":"object","properties":{"request":{"type":"string"}},"required":["request"]}},
-            {"name": "compare_products", "description": "Return a grounded comparison table for a natural-language request.", "inputSchema": {"type":"object","properties":{"request":{"type":"string"}},"required":["request"]}},
-            {"name": "get_evidence", "description": "Inspect one reviewed evidence record by stable ID.", "inputSchema": {"type":"object","properties":{"evidence_id":{"type":"string"}},"required":["evidence_id"]}},
+            {"name": "search_marketplaces", "description": "Search current public web results restricted to official marketplace domains.", "inputSchema": search_schema},
+            {"name": "research_products", "description": "Turn a natural-language request into a live, source-grounded brief or abstention.", "inputSchema": {"type":"object","properties":{"request":{"type":"string"}},"required":["request"]}},
+            {"name": "compare_products", "description": "Return a comparison from current official-domain web results.", "inputSchema": {"type":"object","properties":{"request":{"type":"string"}},"required":["request"]}},
         ]
 
     def handle_mcp(self, request):
@@ -97,10 +91,8 @@ class handler(BaseHTTPRequestHandler):
                 arguments = params.get("arguments") or {}
                 tools = {
                     "search_marketplaces": lambda: search_open_marketplaces(arguments.get("vendor", ""), arguments.get("solution", "")),
-                    "catalog_lookup": lambda: search_catalog(arguments.get("vendor", ""), arguments.get("solution", "")),
                     "research_products": lambda: research_products(arguments.get("request", "")),
                     "compare_products": lambda: compare_products(arguments.get("request", "")),
-                    "get_evidence": lambda: get_evidence(arguments.get("evidence_id", "")),
                 }
                 if params.get("name") not in tools:
                     raise ValueError(f"Unknown tool: {params.get('name')}")
