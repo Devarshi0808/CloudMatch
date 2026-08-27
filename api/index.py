@@ -28,6 +28,20 @@ class handler(BaseHTTPRequestHandler):
     
     def handle_root(self):
         """Handle root endpoint"""
+        frontend_path = os.path.join(os.path.dirname(__file__), '..', 'public', 'index.html')
+        try:
+            with open(frontend_path, 'rb') as frontend:
+                content = frontend.read()
+
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(content)
+            return
+        except OSError:
+            pass
+
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
