@@ -1,6 +1,5 @@
 requirements.txt
 src/
-data/
 docs/
 tests/
 *.pyc
