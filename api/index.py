@@ -2,11 +2,12 @@ from http.server import BaseHTTPRequestHandler
 import json
 import sys
 import os
+import time
 from urllib.parse import parse_qs, urlparse
 try:
-    from .catalog_matcher import llm_suggestions, search_catalog
+    from .catalog_matcher import cache_info, llm_suggestions, search_catalog
 except ImportError:
-    from catalog_matcher import llm_suggestions, search_catalog
+    from catalog_matcher import cache_info, llm_suggestions, search_catalog
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -152,8 +153,16 @@ class handler(BaseHTTPRequestHandler):
     
     def perform_search(self, vendor, solution):
         """Perform the search and return results"""
+        started = time.perf_counter()
+        before = cache_info()
         result = search_catalog(vendor, solution)
+        after = cache_info()
         result["llm"] = llm_suggestions(result["query"])
+        result["observability"] = {
+            "duration_ms": round((time.perf_counter() - started) * 1000, 2),
+            "cache_hit": after.hits > before.hits,
+            "cache_size": after.currsize,
+        }
         return result
 
     def send_json(self, response, status=200):

@@ -7,7 +7,9 @@ import urllib.parse
 import urllib.request
 import zipfile
 import xml.etree.ElementTree as ET
+from copy import deepcopy
 from difflib import SequenceMatcher
+from functools import lru_cache
 from pathlib import Path
 
 
@@ -79,7 +81,8 @@ def marketplace_links(query):
     }
 
 
-def search_catalog(vendor="", solution="", limit=8):
+@lru_cache(maxsize=128)
+def _search_catalog_cached(vendor, solution, limit):
     vendor = str(vendor or "").strip()
     solution = str(solution or "").strip()
     query = " ".join(part for part in (vendor, solution) if part)
@@ -116,6 +119,14 @@ def search_catalog(vendor="", solution="", limit=8):
         "catalog_size": len(load_catalog()),
         "disclaimer": "Marketplace links open external search pages; catalog matches are ranked from the local vendor catalog.",
     }
+
+
+def search_catalog(vendor="", solution="", limit=8):
+    return deepcopy(_search_catalog_cached(str(vendor or "").strip(), str(solution or "").strip(), limit))
+
+
+def cache_info():
+    return _search_catalog_cached.cache_info()
 
 
 def llm_suggestions(query):

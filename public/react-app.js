@@ -78,6 +78,7 @@ function App() {
           h("p", null, "These links open each provider's search page. They are not presented as verified listings."),
           h("div", { className: "provider-links" }, Object.entries(data.marketplace_links).map(([key, url]) => h("a", { href: url, target: "_blank", rel: "noreferrer", key: key }, `${marketplaceNames[key]} ↗`))),
           h("div", { className: "llm-box" }, h("span", { className: "llm-badge" }, data.llm?.enabled ? "LLM enabled" : "LLM optional"), h("p", null, data.llm?.suggestions?.length ? data.llm.suggestions.join(" · ") : "Deterministic ranking is active. Configure OPENAI_API_KEY for query suggestions."))
+          , h("div", { className: "telemetry" }, `${data.observability?.duration_ms ?? "-"} ms · ${data.observability?.cache_hit ? "cache hit" : "catalog scan"}`)
         )
       ) : h("div", { className: "empty-state initial" }, "Your ranked results will appear here. Try “Red Hat” to see vendor-only retrieval."),
     ),

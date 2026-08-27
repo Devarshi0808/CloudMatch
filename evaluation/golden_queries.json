@@ -1,0 +1,12 @@
+[
+  {"vendor": "Adobe", "solution": "Adobe Creative Cloud", "expected_vendor": "Adobe", "expected_solution": "Adobe Creative Cloud"},
+  {"vendor": "Atlassian", "solution": "Jira Software", "expected_vendor": "Atlassian", "expected_solution": "Jira Software"},
+  {"vendor": "Salesforc", "solution": "Sales Cloud", "expected_vendor": "Salesforce", "expected_solution": "Sales Cloud"},
+  {"vendor": "Servicenow", "solution": "ITSM", "expected_vendor": "ServiceNow", "expected_solution": "IT Service Management"},
+  {"vendor": "RedHat", "solution": "Open Shift", "expected_vendor": "Red Hat", "expected_solution": "OpenShift"},
+  {"vendor": "Zendesk", "solution": "Zendesk Suite", "expected_vendor": "Zendesk", "expected_solution": "Zendesk Suite"},
+  {"vendor": "Gitlab", "solution": "Ultimate", "expected_vendor": "GitLab", "expected_solution": "GitLab Ultimate"},
+  {"vendor": "Slack", "solution": "Slack", "expected_vendor": "Slack Technologies", "expected_solution": "Slack"},
+  {"vendor": "Dropbox", "solution": "Business", "expected_vendor": "Dropbox", "expected_solution": "Dropbox Business"},
+  {"vendor": "Twilio", "solution": "Flex", "expected_vendor": "Twilio", "expected_solution": "Twilio Flex"}
+]
