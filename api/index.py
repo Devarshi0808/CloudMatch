@@ -6,8 +6,10 @@ import time
 from urllib.parse import parse_qs, urlparse
 try:
     from .catalog_matcher import cache_info, llm_suggestions, search_catalog
+    from .open_search import search_open_marketplaces
 except ImportError:
     from catalog_matcher import cache_info, llm_suggestions, search_catalog
+    from open_search import search_open_marketplaces
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -154,14 +156,13 @@ class handler(BaseHTTPRequestHandler):
     def perform_search(self, vendor, solution):
         """Perform the search and return results"""
         started = time.perf_counter()
-        before = cache_info()
-        result = search_catalog(vendor, solution)
-        after = cache_info()
-        result["llm"] = llm_suggestions(result["query"])
+        result = search_open_marketplaces(vendor, solution)
+        result["llm"] = {"enabled": result["source"] == "open_web_llm_search"}
         result["observability"] = {
             "duration_ms": round((time.perf_counter() - started) * 1000, 2),
-            "cache_hit": after.hits > before.hits,
-            "cache_size": after.currsize,
+            "cache_hit": False,
+            "cache_size": 0,
+            "source": result["source"],
         }
         return result
 
@@ -175,8 +176,13 @@ class handler(BaseHTTPRequestHandler):
     def mcp_tools(self):
         return [
             {
-                "name": "search_catalog",
-                "description": "Rank vendor and product candidates from the CloudMatch catalog.",
+                "name": "search_marketplaces",
+                "description": "Search open web results for cloud marketplace listings.",
+                "inputSchema": {"type": "object", "properties": {"vendor": {"type": "string"}, "solution": {"type": "string"}}},
+            },
+            {
+                "name": "catalog_lookup",
+                "description": "Look up the local seed catalog explicitly; not a live marketplace search.",
                 "inputSchema": {"type": "object", "properties": {"vendor": {"type": "string"}, "solution": {"type": "string"}}},
             },
             {
@@ -196,7 +202,9 @@ class handler(BaseHTTPRequestHandler):
             elif method == 'tools/call':
                 name = request.get('params', {}).get('name')
                 arguments = request.get('params', {}).get('arguments', {})
-                if name == 'search_catalog':
+                if name == 'search_marketplaces':
+                    result = {"content": [{"type": "json", "json": search_open_marketplaces(arguments.get('vendor', ''), arguments.get('solution', ''))}]}
+                elif name == 'catalog_lookup':
                     result = {"content": [{"type": "json", "json": search_catalog(arguments.get('vendor', ''), arguments.get('solution', ''))}]}
                 elif name == 'suggest_queries':
                     result = {"content": [{"type": "json", "json": llm_suggestions(arguments.get('query', ''))}]}

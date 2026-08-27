@@ -6,17 +6,17 @@ CloudMatch v2 is an explainable retrieval prototype for cloud-product discovery.
 
 1. `api/index.py` receives a search request.
 2. `api/catalog_matcher.py` normalizes vendor and product text.
-3. The matcher ranks the local XLSX catalog using token overlap and sequence similarity.
-4. Each candidate returns a score and the evidence used to rank it.
-5. Provider links are generated as external discovery links and are not presented as verified listings.
-	Google Cloud uses the Marketplace browse route because its search route requires sign-in.
-6. An optional LLM can suggest query variants when `OPENAI_API_KEY` is configured.
+3. The default search sends the query to an open-web search provider with marketplace-scoped intent.
+4. Only observed web pages are returned as results; no marketplace result is fabricated.
+5. Provider links remain available for direct inspection. Google Cloud uses the Marketplace browse route.
+6. An optional LLM web-search tool can retrieve live results when `OPENAI_API_KEY` is configured.
 
 ## Agent integration
 
 `/api/mcp` exposes an agent tool interface with `tools/list` and `tools/call` operations:
 
-- `search_catalog`
+- `search_marketplaces`
+- `catalog_lookup` (explicit seed-catalog lookup only)
 - `suggest_queries`
 
 This endpoint is intentionally described as MCP-compatible tooling, not a complete MCP server
@@ -24,10 +24,9 @@ transport. A future version can add the official MCP transport and lifecycle req
 
 ## Current data boundary
 
-The repository contains a 154-row vendor/product catalog. It does not yet contain a verified,
-continuously refreshed inventory of AWS, Azure, or Google Cloud listings. Provider adapters should
-be added only through official APIs or permitted ingestion methods. Until then, provider URLs are
-external search fallbacks.
+The repository contains a 154-row vendor/product catalog for evaluation and explicit lookup only.
+It is never used as the default marketplace search source. The default path uses open-web search;
+provider APIs or permitted ingestion adapters should replace it for durable listing verification.
 
 ## Evaluation
 

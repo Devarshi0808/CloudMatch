@@ -1,8 +1,8 @@
 # CloudMatch Vercel Deployment Guide
 
-CloudMatch uses a React frontend and a Python serverless API. The API performs explainable
-lexical retrieval over the local vendor catalog and exposes MCP-compatible tools. LLM query
-suggestions are optional and only enabled with `OPENAI_API_KEY`.
+CloudMatch uses a React frontend and a Python serverless API. The default API path searches the
+open web for marketplace pages and exposes an agent tool interface. The local catalog is explicit
+lookup/evaluation data, never a silent fallback. Live LLM web search is enabled with `OPENAI_API_KEY`.
 
 ## Overview
 

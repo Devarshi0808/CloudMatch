@@ -6,13 +6,13 @@ function ResultCard({ match }) {
   return h("article", { className: "match-card" },
     h("div", { className: "match-card-top" },
       h("div", null,
-        h("span", { className: "eyebrow" }, match.vendor),
-        h("h3", null, match.solution)
+        h("span", { className: "eyebrow" }, match.provider),
+        h("h3", null, match.title)
       ),
-      h("strong", { className: "score" }, `${match.score}%`)
+      h("strong", { className: "score" }, match.source === "open_web_llm_search" ? "Live" : "Web")
     ),
-    h("p", { className: "match-type" }, "Catalog match"),
-    h("ul", { className: "evidence" }, match.evidence.map(item => h("li", { key: item }, item)))
+    h("p", { className: "match-type" }, "Observed web result"),
+    h("p", { className: "result-snippet" }, match.snippet || "Open the result to inspect the current provider page.")
   );
 }
 
@@ -71,14 +71,14 @@ function App() {
         data && h("span", { className: "catalog-count" }, `${data.catalog_size} catalog records`)
       ),
       data ? h("div", { className: "results-grid" },
-        h("div", { className: "match-list" }, data.matches.length ? data.matches.map(match => h(ResultCard, { key: `${match.vendor}-${match.solution}`, match })) : h("div", { className: "empty-state" }, "No catalog candidates met the ranking threshold.")),
+        h("div", { className: "match-list" }, data.matches.length ? data.matches.map((match, index) => h("div", { key: `${match.url}-${index}` }, h(ResultCard, { match }), h("a", { className: "result-open", href: match.url, target: "_blank", rel: "noreferrer" }, "Open observed result ↗"))) : h("div", { className: "empty-state" }, data.disclaimer || "No live web results were returned.")),
         h("aside", { className: "insight-panel" },
           h("p", { className: "kicker" }, "External discovery"),
           h("h3", null, "Search live marketplaces"),
-          h("p", null, "These links open each provider's search page. They are not presented as verified listings."),
-          h("div", { className: "provider-links" }, Object.entries(data.marketplace_links).map(([key, url]) => h("a", { href: url, target: "_blank", rel: "noreferrer", key: key }, `${marketplaceNames[key]} ↗`))),
+          h("p", null, data.disclaimer || "Provider search pages are available for direct inspection."),
+          h("div", { className: "provider-links" }, Object.entries(data.provider_links || {}).map(([key, link]) => h("a", { href: link.url, target: "_blank", rel: "noreferrer", key: key }, `${marketplaceNames[key]} ↗`))),
           h("div", { className: "llm-box" }, h("span", { className: "llm-badge" }, data.llm?.enabled ? "LLM enabled" : "LLM optional"), h("p", null, data.llm?.suggestions?.length ? data.llm.suggestions.join(" · ") : "Deterministic ranking is active. Configure OPENAI_API_KEY for query suggestions."))
-          , h("div", { className: "telemetry" }, `${data.observability?.duration_ms ?? "-"} ms · ${data.observability?.cache_hit ? "cache hit" : "catalog scan"}`)
+          , h("div", { className: "telemetry" }, `${data.observability?.duration_ms ?? "-"} ms · ${data.source}`)
         )
       ) : h("div", { className: "empty-state initial" }, "Your ranked results will appear here. Try “Red Hat” to see vendor-only retrieval."),
     ),
