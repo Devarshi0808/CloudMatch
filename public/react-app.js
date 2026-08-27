@@ -53,7 +53,7 @@ function App() {
       h("div", { className: "hero-copy" },
         h("p", { className: "kicker" }, "Marketplace intelligence / v2"),
         h("h1", null, "Find the right cloud product, with evidence."),
-        h("p", { className: "hero-text" }, "Ranked catalog matching for vendor and product discovery across AWS, Azure, and Google Cloud."),
+        h("p", { className: "hero-text" }, "Open-web discovery for vendor and product listings across AWS, Azure, and Google Cloud."),
         h("div", { className: "architecture-strip" },
           h("span", null, "Normalize"), h("i", null, "→"), h("span", null, "Retrieve"), h("i", null, "→"), h("span", null, "Explain"), h("i", null, "→"), h("span", null, "LLM tail")
         )
@@ -80,7 +80,7 @@ function App() {
           h("div", { className: "llm-box" }, h("span", { className: "llm-badge" }, data.llm?.enabled ? "LLM enabled" : "LLM optional"), h("p", null, data.llm?.suggestions?.length ? data.llm.suggestions.join(" · ") : "Deterministic ranking is active. Configure OPENAI_API_KEY for query suggestions."))
           , h("div", { className: "telemetry" }, `${data.observability?.duration_ms ?? "-"} ms · ${data.source}`)
         )
-      ) : h("div", { className: "empty-state initial" }, "Your ranked results will appear here. Try “Red Hat” to see vendor-only retrieval."),
+      ) : h("div", { className: "empty-state initial" }, "Observed provider results will appear here. Try “Red Hat” to search the open web."),
     ),
     h("footer", null, h("span", null, "CloudMatch / explainable retrieval"), h("span", null, "MCP-compatible tools at /api/mcp"))
   );
