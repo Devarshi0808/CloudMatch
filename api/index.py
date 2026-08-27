@@ -159,33 +159,35 @@ class handler(BaseHTTPRequestHandler):
         vendor_lower = vendor.lower()
         solution_lower = solution.lower()
         
+        query = ' '.join(part for part in (vendor, solution) if part).strip()
+
         # AWS Marketplace
-        if vendor and solution:
+        if query:
             aws_confidence = self.calculate_confidence(vendor_lower, solution_lower)
             if aws_confidence > 50:
                 results["aws"].append({
-                    "title": f"{vendor} {solution} on AWS Marketplace",
-                    "url": f"https://aws.amazon.com/marketplace/search?searchTerms={vendor}+{solution}",
+                    "title": f"{query} on AWS Marketplace",
+                    "url": f"https://aws.amazon.com/marketplace/search?searchTerms={query.replace(' ', '+')}",
                     "confidence": aws_confidence
                 })
         
         # Azure Marketplace
-        if vendor and solution:
+        if query:
             azure_confidence = self.calculate_confidence(vendor_lower, solution_lower)
             if azure_confidence > 50:
                 results["azure"].append({
-                    "title": f"{vendor} {solution} on Azure Marketplace",
-                    "url": f"https://azuremarketplace.microsoft.com/en-us/marketplace/apps?search={vendor}+{solution}",
+                    "title": f"{query} on Azure Marketplace",
+                    "url": f"https://azuremarketplace.microsoft.com/en-us/marketplace/apps?search={query.replace(' ', '+')}",
                     "confidence": azure_confidence
                 })
         
         # GCP Marketplace
-        if vendor and solution:
+        if query:
             gcp_confidence = self.calculate_confidence(vendor_lower, solution_lower)
             if gcp_confidence > 50:
                 results["gcp"].append({
-                    "title": f"{vendor} {solution} on Google Cloud Marketplace",
-                    "url": f"https://console.cloud.google.com/marketplace/search?q={vendor}+{solution}",
+                    "title": f"{query} on Google Cloud Marketplace",
+                    "url": f"https://console.cloud.google.com/marketplace/search?q={query.replace(' ', '+')}",
                     "confidence": gcp_confidence
                 })
         
