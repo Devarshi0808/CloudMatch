@@ -27,7 +27,7 @@ python3 -m venv .venv
 .venv/bin/python evals/run_live_evals.py
 ```
 
-The deterministic suite covers parser, allowlist, relevance, deduplication, snippet bounds, abstention, API, MCP, and unified-UI contracts. The labeled live suite uses 12 current marketplace queries and 12 Tavily credits. On August 27, 2026 it measured 100% provenance/quality-gate compliance, 77.8% positive retrieval, 100% negative-query abstention, and 83.3% overall case success.
+The deterministic suite covers parser, allowlist, relevance, deduplication, snippet bounds, abstention, API, MCP, and unified-UI contracts. The labeled live suite uses 12 current marketplace queries and 12 Tavily credits. Consecutive runs on August 27, 2026 measured 100% provenance/quality-gate compliance, 66.7–77.8% positive retrieval, 100% negative-query abstention, and 75–83.3% overall case success. The range is reported because public search coverage fluctuates between identical runs.
 
 For a focused integration check:
 
