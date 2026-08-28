@@ -10,4 +10,4 @@
 
 Run `python3 evals/run_live_evals.py`. The suite currently uses 12 Tavily basic-search credits.
 
-The command exits successfully only when provenance/quality and negative-abstention rates are 100% and positive retrieval is at least 75%. Identical live queries can cross that threshold between runs because Tavily sometimes returns no candidates for otherwise discoverable Azure or Google Cloud listings; the failure is intentionally visible.
+The command exits successfully only when provenance/quality and negative-abstention rates are 100% and positive retrieval is at least 75%. The August 28, 2026 v4.2 run reached 88.9% positive retrieval and 91.7% overall success; the remaining miss was a JavaScript-heavy Google Cloud Marketplace listing that was visible in the provider UI but absent from Tavily's indexed product-page results. Identical live queries may vary, and that failure is intentionally visible.

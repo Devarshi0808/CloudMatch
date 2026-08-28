@@ -45,7 +45,7 @@ def test_research_tool_is_exposed():
     assert names == {"search_marketplaces", "research_products", "compare_products"}
 
 def test_research_returns_grounded_evidence():
-    live={"query":"Ansible","matches":[{"id":"live-1","provider":"azure","title":"Ansible","url":"https://azuremarketplace.microsoft.com/en-us/marketplace/apps/x","description":"Live","relevance_score":0.9,"match_score":0.95,"rank_score":0.95,"matched_terms":["ansible"],"query_coverage":1.0,"verification":"official_domain","retrieved_at":"now"}],"providers":{"azure":{"status":"ok"}},"retrieved_at":"now","filtered_count":2,"duplicate_count":1,"disclaimer":"live"}
+    live={"query":"Ansible","matches":[{"id":"live-1","provider":"azure","title":"Ansible","url":"https://marketplace.microsoft.com/en-us/product/x","description":"Live","relevance_score":0.9,"match_score":0.95,"rank_score":0.95,"matched_terms":["ansible"],"query_coverage":1.0,"verification":"official_domain","retrieved_at":"now"}],"providers":{"azure":{"status":"ok"}},"retrieved_at":"now","filtered_count":2,"duplicate_count":1,"disclaimer":"live"}
     with patch("api.agent_research.search_live_marketplaces", return_value=live):
         result = __import__("api.agent_research", fromlist=["research_products"]).research_products("Find Ansible on Azure")
     assert result["status"] == "grounded"

@@ -5,7 +5,7 @@ UI / MCP request
       ↓
 intent + provider detection
       ↓
-one live Tavily domain-restricted search (over-fetch candidates)
+one live Tavily domain-restricted search (provider-aware query, over-fetch candidates)
       ↓
 HTTPS hostname + marketplace-path validation
       ↓
@@ -16,7 +16,7 @@ grounded result set or explicit abstention
 
 ## Live retrieval
 
-`api/live_search.py` submits one Tavily basic search restricted to the selected official marketplace domains. Tavily returns titles, content snippets, URLs, and relevance scores. CloudMatch then applies its own allowlist for exact official hostnames and marketplace paths; lookalike domains and unrelated official pages are rejected.
+`api/live_search.py` submits one Tavily basic search restricted to the selected official marketplace domains. Microsoft Marketplace's current domain and its legacy Azure Marketplace domain are both recognized through explicit hostname/path pairs. Provider-aware Azure query context improves discovery after Microsoft's marketplace migration, while all relevance features are computed from the unmodified user query. Tavily returns titles, content snippets, URLs, and relevance scores. CloudMatch then applies its own allowlist for exact official hostnames and marketplace paths; lookalike domains and unrelated official pages are rejected.
 
 Each accepted result includes a URL-derived stable ID, provider, concise snippet, match score, matched query terms, official-domain verification label, and UTC retrieval timestamp. Tracking parameters are removed before stable IDs are created. Exact normalized titles are collapsed per provider, with the higher-ranked listing retained. No result records are stored in the repository.
 

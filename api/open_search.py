@@ -7,7 +7,7 @@ except ImportError:
 
 PROVIDER_LINKS={
     "aws":"https://aws.amazon.com/marketplace/search?searchTerms={query}",
-    "azure":"https://azuremarketplace.microsoft.com/en-us/marketplace/apps?search={query}",
+    "azure":"https://marketplace.microsoft.com/en-us/marketplace/apps?search={query}",
     "gcp":"https://console.cloud.google.com/marketplace/browse?q={query}",
 }
 

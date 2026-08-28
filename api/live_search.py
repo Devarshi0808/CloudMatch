@@ -10,9 +10,24 @@ import urllib.request
 
 
 PROVIDERS = {
-    "aws": {"name": "AWS Marketplace", "domain": "aws.amazon.com", "path": "/marketplace/pp/"},
-    "azure": {"name": "Microsoft Azure Marketplace", "domain": "azuremarketplace.microsoft.com", "path": "/marketplace/apps/"},
-    "gcp": {"name": "Google Cloud Marketplace", "domain": "console.cloud.google.com", "path": "/marketplace/product/"},
+    "aws": {
+        "name": "AWS Marketplace",
+        "search_domains": ["aws.amazon.com"],
+        "url_rules": [("aws.amazon.com", "/marketplace/pp/")],
+    },
+    "azure": {
+        "name": "Microsoft Marketplace (Azure)",
+        "search_domains": ["marketplace.microsoft.com", "azuremarketplace.microsoft.com"],
+        "url_rules": [
+            ("marketplace.microsoft.com", "/product/"),
+            ("azuremarketplace.microsoft.com", "/marketplace/apps/"),
+        ],
+    },
+    "gcp": {
+        "name": "Google Cloud Marketplace",
+        "search_domains": ["console.cloud.google.com"],
+        "url_rules": [("console.cloud.google.com", "/marketplace/product/")],
+    },
 }
 ALIASES = {"aws": "aws", "amazon": "aws", "azure": "azure", "microsoft": "azure", "gcp": "gcp", "google": "gcp"}
 GENERIC_QUERY_TERMS = {
@@ -24,8 +39,12 @@ TRACKING_QUERY_KEYS = {"ocid", "ref", "source", "tab", "utm_campaign", "utm_cont
 
 def _valid_url(url, provider):
     parsed = urllib.parse.urlparse(url)
-    rule = PROVIDERS[provider]
-    return parsed.scheme == "https" and parsed.hostname == rule["domain"] and rule["path"] in parsed.path
+    if parsed.scheme != "https":
+        return False
+    return any(
+        parsed.hostname == domain and path in parsed.path
+        for domain, path in PROVIDERS[provider]["url_rules"]
+    )
 
 
 def _provider_for_url(url):
@@ -152,10 +171,17 @@ def _call_tavily(query, domains, limit, api_key):
     request = urllib.request.Request(
         "https://api.tavily.com/search",
         data=body,
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "User-Agent": "CloudMatch/4.1"},
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "User-Agent": "CloudMatch/4.2"},
     )
     with urllib.request.urlopen(request, timeout=20) as response:
         return json.loads(response.read().decode())
+
+
+def _retrieval_query(query, selected):
+    """Add provider context for discovery without changing relevance evaluation."""
+    if selected == ["azure"]:
+        return f"{query} Microsoft Marketplace Azure"
+    return query
 
 
 def search_live_marketplaces(query, provider="", limit=5):
@@ -170,7 +196,12 @@ def search_live_marketplaces(query, provider="", limit=5):
         return {"query": query, "matches": [], "providers": statuses, "source": "tavily_live_search", "retrieved_at": retrieved_at, "filtered_count": 0, "duplicate_count": 0, "disclaimer": "Live Tavily search is not configured; no local fallback was used."}
     try:
         requested_results = min(max(limit * 3, 10), 20)
-        payload = _call_tavily(query, [PROVIDERS[key]["domain"] for key in selected], requested_results, api_key)
+        domains = list(dict.fromkeys(
+            domain
+            for key in selected
+            for domain in PROVIDERS[key]["search_domains"]
+        ))
+        payload = _call_tavily(_retrieval_query(query, selected), domains, requested_results, api_key)
         candidates = []
         filtered_count = 0
         for raw in payload.get("results", []):

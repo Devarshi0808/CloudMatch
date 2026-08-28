@@ -93,7 +93,7 @@ function App() {
       h("div", { className: "system-status" }, h("span", { className: "status-dot" }), "Live official-domain retrieval")),
     h("section", { className: "hero" },
       h("div", { className: "hero-copy" },
-        h("p", { className: "kicker" }, "Agent-native marketplace research / v4.1"),
+        h("p", { className: "kicker" }, "Agent-native marketplace research / v4.2"),
         h("h1", null, "Research cloud products. Live."),
         h("p", { className: "hero-text" }, "One request produces one ranked evidence set from current AWS, Azure, or Google Cloud marketplace pages—without catalogs, snapshots, or cloud accounts."),
         h("div", { className: "architecture-strip" }, h("span", null, "Interpret"), h("i", null, "→"), h("span", null, "Retrieve"), h("i", null, "→"), h("span", null, "Filter + dedupe"), h("i", null, "→"), h("span", null, "Ground or abstain"))),

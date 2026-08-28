@@ -29,7 +29,7 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         if parsed.path == "/api/health":
-            self.send_json({"status": "healthy", "service": "CloudMatch API", "version": "4.1.0", "runtime": "tavily-live-search-quality-ranked"})
+            self.send_json({"status": "healthy", "service": "CloudMatch API", "version": "4.2.0", "runtime": "tavily-live-search-quality-ranked"})
         elif parsed.path == "/api/search":
             params = parse_qs(parsed.query)
             self.handle_search(params.get("vendor", [""])[0], params.get("solution", [""])[0])

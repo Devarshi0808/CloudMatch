@@ -1,10 +1,14 @@
 from unittest.mock import patch
-from api.live_search import _canonical_url, _display_title, _summarize_content, _valid_url, detect_provider, search_live_marketplaces
+from api.live_search import _canonical_url, _display_title, _retrieval_query, _summarize_content, _valid_url, detect_provider, search_live_marketplaces
 from api.open_search import provider_links
 
 def test_domain_verification_rejects_lookalikes():
     assert _valid_url("https://aws.amazon.com/marketplace/pp/prodview-1", "aws")
+    assert _valid_url("https://marketplace.microsoft.com/en-us/product/redhat.rhaapomsa", "azure")
+    assert _valid_url("https://marketplace.microsoft.com/es-es/product/saas/redhat.ansible", "azure")
+    assert _valid_url("https://azuremarketplace.microsoft.com/en-us/marketplace/apps/redhat.ansible", "azure")
     assert not _valid_url("https://evil.example/aws.amazon.com/marketplace/pp/x", "aws")
+    assert not _valid_url("https://marketplace.microsoft.com/en-us/marketplace/apps", "azure")
 
 def test_provider_detection_and_encoded_links():
     assert detect_provider("Find this on Microsoft Azure") == "azure"
@@ -18,7 +22,7 @@ def test_tavily_results_are_revalidated_by_official_domain():
     assert result["matches"][0]["provider"] == "aws" and result["matches"][0]["relevance_score"] == 0.92
 
 def test_ranking_prefers_query_terms_in_official_url():
-    payload={"results":[{"url":"https://azuremarketplace.microsoft.com/en-us/marketplace/apps/other.ansible","title":"Marketplace","content":"Red Hat Ansible","score":0.95},{"url":"https://azuremarketplace.microsoft.com/en-us/marketplace/apps/redhat.rh-ansible","title":"Marketplace","content":"Red Hat Ansible","score":0.85}]}
+    payload={"results":[{"url":"https://marketplace.microsoft.com/en-us/product/other.ansible","title":"Marketplace","content":"Red Hat Ansible","score":0.95},{"url":"https://marketplace.microsoft.com/en-us/product/redhat.rh-ansible","title":"Marketplace","content":"Red Hat Ansible","score":0.85}]}
     with patch.dict("os.environ", {"TAVILY_API_KEY":"test"}), patch("api.live_search._call_tavily", return_value=payload): result=search_live_marketplaces("Red Hat Ansible", "azure")
     assert "redhat" in result["matches"][0]["url"]
 
@@ -75,6 +79,15 @@ def test_live_search_overfetches_before_quality_filtering():
     with patch.dict("os.environ", {"TAVILY_API_KEY":"test"}), patch("api.live_search._call_tavily", return_value={"results":[]}) as call:
         search_live_marketplaces("Kubernetes", "gcp", limit=5)
     assert call.call_args.args[2] == 15
+
+def test_azure_search_uses_current_and_legacy_official_domains():
+    with patch.dict("os.environ", {"TAVILY_API_KEY":"test"}), patch("api.live_search._call_tavily", return_value={"results":[]}) as call:
+        search_live_marketplaces("Ansible", "azure", limit=5)
+    assert call.call_args.args[1] == ["marketplace.microsoft.com", "azuremarketplace.microsoft.com"]
+
+def test_azure_retrieval_query_adds_provider_context_only_for_discovery():
+    assert _retrieval_query("Red Hat OpenShift", ["azure"]) == "Red Hat OpenShift Microsoft Marketplace Azure"
+    assert _retrieval_query("Red Hat OpenShift", ["aws"]) == "Red Hat OpenShift"
 
 def test_missing_key_is_explicit_not_fabricated():
     with patch.dict("os.environ", {}, clear=True): result=search_live_marketplaces("OpenShift", provider="gcp")
