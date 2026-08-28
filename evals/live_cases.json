@@ -1,0 +1,14 @@
+[
+  {"id":"azure_ansible","query":"Red Hat Ansible Automation Platform","provider":"azure","expected_any":["ansible"],"expect_results":true},
+  {"id":"aws_ansible","query":"Red Hat Ansible Automation Platform","provider":"aws","expected_any":["ansible"],"expect_results":true},
+  {"id":"gcp_neo4j_kubernetes","query":"Neo4j Community Edition Kubernetes","provider":"gcp","expected_any":["neo4j","kubernetes"],"expect_results":true},
+  {"id":"aws_mongodb","query":"MongoDB Atlas","provider":"aws","expected_any":["mongodb","atlas"],"expect_results":true},
+  {"id":"azure_confluent","query":"Confluent Cloud Kafka","provider":"azure","expected_any":["confluent","kafka"],"expect_results":true},
+  {"id":"aws_datadog","query":"Datadog","provider":"aws","expected_any":["datadog"],"expect_results":true},
+  {"id":"azure_snowflake","query":"Snowflake","provider":"azure","expected_any":["snowflake"],"expect_results":true},
+  {"id":"azure_openshift","query":"Red Hat OpenShift","provider":"azure","expected_any":["openshift"],"expect_results":true},
+  {"id":"aws_fortigate","query":"Fortinet FortiGate","provider":"aws","expected_any":["fortinet","fortigate"],"expect_results":true},
+  {"id":"negative_mars","query":"quantum banana database for Mars","provider":"aws","expected_any":[],"expect_results":false},
+  {"id":"negative_unicorn","query":"telepathic unicorn payroll engine","provider":"azure","expected_any":[],"expect_results":false},
+  {"id":"negative_time_machine","query":"production time machine orchestration","provider":"gcp","expected_any":[],"expect_results":false}
+]

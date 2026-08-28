@@ -9,10 +9,12 @@ CloudMatch is an agent-native cloud marketplace research service. Every request 
 - No bundled product catalog, synthetic listing data, or precomputed result snapshot.
 - No AWS account, Azure subscription, marketplace credentials, or paid plan; Tavily's free API key is required.
 - Results must use HTTPS, match an allowlisted official hostname, and match that provider's marketplace path.
+- Results must also pass query-term coverage thresholds and canonical-title deduplication.
+- Evidence snippets are cleaned and bounded; the UI shows at most five ranked results from one shared request.
 - Provider failures are reported independently; unavailable retrieval never creates a fallback listing.
 - Natural-language research and comparison are available through HTTP and native MCP tools.
 
-The production API makes one Tavily basic search with `include_domains` restricted to the three official hosts, then independently validates every returned hostname and marketplace path. Automatic parameters and generated answers are disabled to keep each request at one free-plan credit and preserve CloudMatch's own grounding boundary.
+The production API makes one Tavily basic search with `include_domains` restricted to the three official hosts, over-fetches up to 15 candidates, then validates, filters, ranks, and deduplicates locally. Automatic parameters and generated answers are disabled to keep each request at one free-plan credit and preserve CloudMatch's own grounding boundary.
 
 ## Run and verify
 
@@ -22,9 +24,12 @@ python3 -m venv .venv
 .venv/bin/pip install pytest
 .venv/bin/python dev_server.py
 .venv/bin/python -m pytest -q
+.venv/bin/python evals/run_live_evals.py
 ```
 
-The test suite mocks network boundaries for deterministic parser, allowlist, failure-state, API, and agent-contract tests. For a real integration check:
+The deterministic suite covers parser, allowlist, relevance, deduplication, snippet bounds, abstention, API, MCP, and unified-UI contracts. The labeled live suite uses 12 current marketplace queries and 12 Tavily credits. On August 27, 2026 it measured 100% provenance/quality-gate compliance, 77.8% positive retrieval, 100% negative-query abstention, and 83.3% overall case success.
+
+For a focused integration check:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/research \
@@ -44,6 +49,7 @@ MCP tools: `search_marketplaces`, `research_products`, and `compare_products`.
 ## Honest limitations
 
 - Results depend on public web indexing and provider page discoverability; this is not an exhaustive inventory API.
+- The labeled evaluation currently exposes weaker recall for some GCP and Azure listings; CloudMatch abstains rather than relaxing provenance or relevance checks.
 - Azure may challenge direct automated requests and Google pages are JavaScript-heavy, which is why discovery uses official-domain web indexing.
 - Tavily's free tier currently provides 1,000 basic searches per month. CloudMatch reports quota or retrieval failures instead of hiding them.
 - Result snippets come from current search-index content; users can inspect every official source URL directly.
