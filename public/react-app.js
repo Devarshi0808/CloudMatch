@@ -38,7 +38,8 @@ function ResearchBrief({ brief }) {
     h("div", { className: "quality-strip" },
       h("span", null, h("strong", null, quality.result_count || 0), " relevant"),
       h("span", null, h("strong", null, quality.duplicate_count || 0), " duplicates removed"),
-      h("span", null, h("strong", null, quality.filtered_count || 0), " low-quality filtered")),
+      h("span", null, h("strong", null, quality.filtered_count || 0), " low-quality filtered"),
+      h("span", null, h("strong", null, quality.estimated_credits || 1), ` free-plan credit${quality.estimated_credits === 1 ? "" : "s"}`)),
     h("p", { className: "brief-caveat" }, brief.caveats.join(" ")));
 }
 
@@ -62,7 +63,7 @@ function Results({ brief }) {
       h(ProviderHealth, { providers: brief.providers }),
       h("div", { className: "provider-links" }, links.map(([key, link]) =>
         h("a", { href: link.url, target: "_blank", rel: "noreferrer", key }, `Search ${marketplaceNames[key]} directly ↗`))),
-      h("div", { className: "telemetry" }, `Live web search · ${evidence.length} distinct verified URLs`)));
+      h("div", { className: "telemetry" }, `Live ${brief.quality?.search_depth || "basic"} search · ${evidence.length} distinct verified URLs`)));
 }
 
 function App() {
@@ -93,7 +94,7 @@ function App() {
       h("div", { className: "system-status" }, h("span", { className: "status-dot" }), "Live official-domain retrieval")),
     h("section", { className: "hero" },
       h("div", { className: "hero-copy" },
-        h("p", { className: "kicker" }, "Agent-native marketplace research / v4.2"),
+        h("p", { className: "kicker" }, "Agent-native marketplace research / v4.3"),
         h("h1", null, "Research cloud products. Live."),
         h("p", { className: "hero-text" }, "One request produces one ranked evidence set from current AWS, Azure, or Google Cloud marketplace pages—without catalogs, snapshots, or cloud accounts."),
         h("div", { className: "architecture-strip" }, h("span", null, "Interpret"), h("i", null, "→"), h("span", null, "Retrieve"), h("i", null, "→"), h("span", null, "Filter + dedupe"), h("i", null, "→"), h("span", null, "Ground or abstain"))),

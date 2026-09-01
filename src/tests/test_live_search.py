@@ -1,5 +1,6 @@
-from unittest.mock import patch
-from api.live_search import _canonical_url, _display_title, _retrieval_query, _summarize_content, _valid_url, detect_provider, search_live_marketplaces
+import json
+from unittest.mock import MagicMock, patch
+from api.live_search import _call_tavily, _canonical_url, _display_title, _retrieval_query, _search_depth, _summarize_content, _valid_url, detect_provider, search_live_marketplaces
 from api.open_search import provider_links
 
 def test_domain_verification_rejects_lookalikes():
@@ -79,15 +80,35 @@ def test_live_search_overfetches_before_quality_filtering():
     with patch.dict("os.environ", {"TAVILY_API_KEY":"test"}), patch("api.live_search._call_tavily", return_value={"results":[]}) as call:
         search_live_marketplaces("Kubernetes", "gcp", limit=5)
     assert call.call_args.args[2] == 15
+    assert call.call_args.args[4] == "fast"
 
 def test_azure_search_uses_current_and_legacy_official_domains():
     with patch.dict("os.environ", {"TAVILY_API_KEY":"test"}), patch("api.live_search._call_tavily", return_value={"results":[]}) as call:
         search_live_marketplaces("Ansible", "azure", limit=5)
     assert call.call_args.args[1] == ["marketplace.microsoft.com", "azuremarketplace.microsoft.com"]
+    assert call.call_args.args[4] == "fast"
 
 def test_azure_retrieval_query_adds_provider_context_only_for_discovery():
+    assert _retrieval_query("MongoDB Atlas", ["aws"]) == "MongoDB Atlas AWS Marketplace"
     assert _retrieval_query("Red Hat OpenShift", ["azure"]) == "Red Hat OpenShift Microsoft Marketplace Azure"
-    assert _retrieval_query("Red Hat OpenShift", ["aws"]) == "Red Hat OpenShift"
+    assert _retrieval_query("Neo4j", ["gcp"]) == "Neo4j"
+
+def test_search_depth_defaults_to_one_credit_fast_mode_and_allows_override():
+    with patch.dict("os.environ", {}, clear=True):
+        assert _search_depth(["aws"]) == "fast"
+        assert _search_depth(["azure"]) == "fast"
+        assert _search_depth(["gcp"]) == "fast"
+    with patch.dict("os.environ", {"TAVILY_SEARCH_DEPTH":"basic"}):
+        assert _search_depth(["aws"]) == "basic"
+
+def test_fast_request_omits_unsupported_safe_search_parameter():
+    response = MagicMock()
+    response.__enter__.return_value.read.return_value = b'{"results":[]}'
+    with patch("api.live_search.urllib.request.urlopen", return_value=response) as urlopen:
+        _call_tavily("Datadog", ["aws.amazon.com"], 5, "test", "fast")
+    request_body = json.loads(urlopen.call_args.args[0].data)
+    assert request_body["search_depth"] == "fast"
+    assert "safe_search" not in request_body
 
 def test_missing_key_is_explicit_not_fabricated():
     with patch.dict("os.environ", {}, clear=True): result=search_live_marketplaces("OpenShift", provider="gcp")

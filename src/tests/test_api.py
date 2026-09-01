@@ -51,7 +51,7 @@ def test_research_returns_grounded_evidence():
     assert result["status"] == "grounded"
     assert result["evidence"][0]["provider"] == "azure"
     assert result["confidence"] == 0.95
-    assert result["quality"] == {"filtered_count": 2, "duplicate_count": 1, "result_count": 1}
+    assert result["quality"] == {"filtered_count": 2, "duplicate_count": 1, "result_count": 1, "search_depth": "basic", "estimated_credits": 1}
     assert "azure" in result["provider_links"]
 
 def test_agent_expands_known_product_family_without_changing_user_request():

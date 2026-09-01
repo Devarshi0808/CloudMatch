@@ -14,7 +14,7 @@ CloudMatch is an agent-native cloud marketplace research service. Every request 
 - Provider failures are reported independently; unavailable retrieval never creates a fallback listing.
 - Natural-language research and comparison are available through HTTP and native MCP tools.
 
-The production API makes one Tavily basic search with `include_domains` restricted to exact official hosts, over-fetches up to 15 candidates, then validates, filters, ranks, and deduplicates locally. Azure-constrained requests add marketplace context to the discovery query because Microsoft migrated listings to `marketplace.microsoft.com`; relevance is still scored only against the user's original query. Automatic parameters and generated answers are disabled to keep each request at one free-plan credit and preserve CloudMatch's own grounding boundary.
+The production API makes one Tavily fast search with `include_domains` restricted to exact official hosts, over-fetches up to 15 candidates, then validates, filters, ranks, and deduplicates locally. AWS- and Azure-constrained requests add provider context to the discovery query; relevance is still scored only against the user's original query. Automatic parameters and generated answers are disabled, keeping each request at one free-plan credit and preserving CloudMatch's own grounding boundary.
 
 ## Run and verify
 
@@ -27,7 +27,7 @@ python3 -m venv .venv
 .venv/bin/python evals/run_live_evals.py
 ```
 
-The deterministic suite covers parser, allowlist, relevance, deduplication, snippet bounds, abstention, API, MCP, and unified-UI contracts. The labeled live suite uses 12 current marketplace queries and 12 Tavily credits. The August 28, 2026 v4.2 run measured 100% provenance/quality-gate compliance, 88.9% positive retrieval, 100% negative-query abstention, and 91.7% overall case success. Public search coverage can fluctuate between identical runs, so these are observed evaluation results rather than an availability guarantee.
+The deterministic suite covers parser, allowlist, relevance, deduplication, snippet bounds, abstention, credit/depth routing, API, MCP, and unified-UI contracts. The labeled live suite contains 24 cases and uses 24 Tavily credits. The September 1, 2026 v4.3 run measured 100% provenance/quality-gate compliance, 100% provider availability, 94.4% positive retrieval, 100% negative-query abstention, 704 ms mean latency, and 878 ms p95 latency. Provider positive retrieval was 100% for AWS, 100% for Azure, and 83.3% for GCP. These are observed live results, not an availability guarantee.
 
 For a focused integration check:
 
@@ -49,7 +49,7 @@ MCP tools: `search_marketplaces`, `research_products`, and `compare_products`.
 ## Honest limitations
 
 - Results depend on public web indexing and provider page discoverability; this is not an exhaustive inventory API.
-- The labeled evaluation currently exposes weaker recall for GCP listings; CloudMatch abstains rather than relaxing provenance or relevance checks.
+- The labeled evaluation currently misses one discoverable GCP Neo4j Community Edition page that Tavily does not surface; CloudMatch abstains rather than relaxing provenance or relevance checks.
 - Azure may challenge direct automated requests and Google pages are JavaScript-heavy, which is why discovery uses official-domain web indexing.
-- Tavily's free tier currently provides 1,000 basic searches per month. CloudMatch reports quota or retrieval failures instead of hiding them.
+- Tavily's free tier currently provides 1,000 credits per month with no credit card required; CloudMatch's default fast search costs one credit. CloudMatch reports quota or retrieval failures instead of hiding them.
 - Result snippets come from current search-index content; users can inspect every official source URL directly.

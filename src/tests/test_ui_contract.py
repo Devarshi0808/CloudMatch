@@ -16,4 +16,6 @@ def test_ui_exposes_quality_controls_and_bounded_snippets():
     styles = (ROOT / "public" / "react-app.css").read_text()
     assert "duplicates removed" in script
     assert "low-quality filtered" in script
+    assert "free-plan credit" in script
+    assert "quality?.search_depth" in script
     assert "-webkit-line-clamp: 4" in styles

@@ -157,17 +157,19 @@ def _display_title(raw):
     return derived or "Official marketplace listing"
 
 
-def _call_tavily(query, domains, limit, api_key):
-    body = json.dumps({
+def _call_tavily(query, domains, limit, api_key, search_depth="basic"):
+    parameters = {
         "query": query,
-        "search_depth": "basic",
+        "search_depth": search_depth,
         "max_results": min(max(limit, 1), 20),
         "include_domains": domains,
         "include_answer": False,
         "include_raw_content": False,
         "auto_parameters": False,
-        "safe_search": True,
-    }).encode()
+    }
+    if search_depth != "fast":
+        parameters["safe_search"] = True
+    body = json.dumps(parameters).encode()
     request = urllib.request.Request(
         "https://api.tavily.com/search",
         data=body,
@@ -179,21 +181,31 @@ def _call_tavily(query, domains, limit, api_key):
 
 def _retrieval_query(query, selected):
     """Add provider context for discovery without changing relevance evaluation."""
+    if selected == ["aws"]:
+        return f"{query} AWS Marketplace"
     if selected == ["azure"]:
         return f"{query} Microsoft Marketplace Azure"
     return query
 
 
+def _search_depth(selected):
+    """Use the evaluated low-latency mode while allowing an explicit override."""
+    configured = os.getenv("TAVILY_SEARCH_DEPTH", "fast").strip().lower()
+    return configured if configured in {"fast", "basic", "advanced"} else "fast"
+
+
 def search_live_marketplaces(query, provider="", limit=5):
     query = " ".join(str(query or "").split())[:300]
     selected = [provider] if provider in PROVIDERS else list(PROVIDERS)
+    search_depth = _search_depth(selected)
+    estimated_credits = 2 if search_depth == "advanced" else 1
     retrieved_at = datetime.now(timezone.utc).isoformat()
     statuses = {key: {"status": "pending", "result_count": 0, "detail": "Awaiting live search"} for key in selected}
     api_key = os.getenv("TAVILY_API_KEY", "").strip()
     if not api_key:
         for key in selected:
             statuses[key] = {"status": "not_configured", "result_count": 0, "detail": "TAVILY_API_KEY is required for live search"}
-        return {"query": query, "matches": [], "providers": statuses, "source": "tavily_live_search", "retrieved_at": retrieved_at, "filtered_count": 0, "duplicate_count": 0, "disclaimer": "Live Tavily search is not configured; no local fallback was used."}
+        return {"query": query, "matches": [], "providers": statuses, "source": "tavily_live_search", "retrieved_at": retrieved_at, "search_depth": search_depth, "estimated_credits": estimated_credits, "filtered_count": 0, "duplicate_count": 0, "disclaimer": "Live Tavily search is not configured; no local fallback was used."}
     try:
         requested_results = min(max(limit * 3, 10), 20)
         domains = list(dict.fromkeys(
@@ -201,7 +213,7 @@ def search_live_marketplaces(query, provider="", limit=5):
             for key in selected
             for domain in PROVIDERS[key]["search_domains"]
         ))
-        payload = _call_tavily(_retrieval_query(query, selected), domains, requested_results, api_key)
+        payload = _call_tavily(_retrieval_query(query, selected), domains, requested_results, api_key, search_depth)
         candidates = []
         filtered_count = 0
         for raw in payload.get("results", []):
@@ -250,13 +262,15 @@ def search_live_marketplaces(query, provider="", limit=5):
         matches = matches[:limit]
         for key in selected:
             count = sum(item["provider"] == key for item in matches)
-            statuses[key] = {"status": "ok", "result_count": count, "detail": "Tavily live search completed"}
+            statuses[key] = {"status": "ok", "result_count": count, "detail": f"Tavily {search_depth} search completed"}
         return {
             "query": query,
             "matches": matches,
             "providers": statuses,
             "source": "tavily_live_search",
             "retrieved_at": retrieved_at,
+            "search_depth": search_depth,
+            "estimated_credits": estimated_credits,
             "response_time": payload.get("response_time"),
             "filtered_count": filtered_count,
             "duplicate_count": duplicate_count,
@@ -265,4 +279,4 @@ def search_live_marketplaces(query, provider="", limit=5):
     except Exception as error:
         for key in selected:
             statuses[key] = {"status": "unavailable", "result_count": 0, "detail": str(error)[:140]}
-        return {"query": query, "matches": [], "providers": statuses, "source": "tavily_live_search", "retrieved_at": retrieved_at, "filtered_count": 0, "duplicate_count": 0, "disclaimer": "Live search was unavailable; no local fallback was used."}
+        return {"query": query, "matches": [], "providers": statuses, "source": "tavily_live_search", "retrieved_at": retrieved_at, "search_depth": search_depth, "estimated_credits": estimated_credits, "filtered_count": 0, "duplicate_count": 0, "disclaimer": "Live search was unavailable; no local fallback was used."}
